@@ -1,0 +1,42 @@
+# Backend
+carma-backend/node_modules/
+carma-backend/.env
+carma-backend/uploads/
+
+# Frontend
+carma-frontend/node_modules/
+carma-frontend/dist/
+carma-frontend/.env
+
+# System files
+.DS_Store
+*.log
+
+# Dependencies
+**/node_modules/
+node_modules/
+
+# Environment files
+**/.env
+.env
+
+# Build files
+**/dist/
+dist/
+
+# Uploads (user data)
+**/uploads/
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Lock files (optional - some people include these)
+# package-lock.json
