@@ -20,9 +20,8 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
     }
   };
 
-  const imageUrl = vehicle.image_path 
-  ? `${import.meta.env.PROD ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com' : 'http://localhost:5000'}/${vehicle.image_path}`
-  : 'https://via.placeholder.com/400x300?text=No+Image';
+  // If image_path exists, it's already a full Cloudinary URL
+  const imageUrl = vehicle.image_path || 'https://via.placeholder.com/400x300?text=No+Image';
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
@@ -33,6 +32,8 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
           alt={`${vehicle.make} ${vehicle.model}`}
           className="w-full h-full object-cover"
           onError={(e) => {
+            console.error('Vehicle image load error:', e);
+            e.target.onerror = null;
             e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
           }}
         />
