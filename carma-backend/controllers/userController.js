@@ -26,7 +26,7 @@ const upload = multer({
       cb(new Error('Only images and PDFs are allowed!'));
     }
   }
-}).single('idImage');  // ← This might say 'idImage'
+}).single('id');  // ← Change to 'id' to match frontend
 
 // Upload ID for verification
 exports.uploadID = async (req, res) => {
