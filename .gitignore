@@ -24,6 +24,17 @@ node_modules/
 **/dist/
 dist/
 
+# Uploads - keep folders, ignore files
+uploads/*
+!uploads/.gitkeep
+!uploads/ids/
+!uploads/vehicles/
+uploads/ids/*
+!uploads/ids/.gitkeep
+uploads/vehicles/*
+!uploads/vehicles/.gitkeep
+
+
 # Uploads (user data)
 **/uploads/
 uploads/

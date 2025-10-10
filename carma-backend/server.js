@@ -1,9 +1,32 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 const db = require('./config/db');
 
 const app = express();
+
+// CRITICAL: Create upload directories if they don't exist
+const uploadDirs = [
+  'uploads',
+  'uploads/ids',
+  'uploads/vehicles'
+];
+
+uploadDirs.forEach(dir => {
+  const dirPath = path.join(__dirname, dir);
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    console.log(`✅ Created directory: ${dir}`);
+  }
+});
+
+// Middleware
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
 
 // Middleware
 app.use(cors());
