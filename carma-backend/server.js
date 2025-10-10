@@ -34,6 +34,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 
+// CRITICAL: Serve uploads folder as static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Test route
 app.get('/', (req, res) => {
   res.json({ message: '✅ CARma Backend API is running!' });
