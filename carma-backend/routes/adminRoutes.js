@@ -1,17 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getPendingVerifications, 
+const {
+  getPendingVerifications,
   getAllVerifications,
+  verifyUser,
   updateVerificationStatus,
-  getDashboardStats 
+  getDashboardStats
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
-// All routes require admin role
-router.get('/verifications/pending', protect, authorize('admin'), getPendingVerifications);
-router.get('/verifications/all', protect, authorize('admin'), getAllVerifications);
-router.put('/verifications/update', protect, authorize('admin'), updateVerificationStatus);
-router.get('/stats', protect, authorize('admin'), getDashboardStats);
+// Protect all admin routes
+router.use(protect);
+router.use(authorize('admin'));
+
+// Routes
+router.get('/verifications/pending', getPendingVerifications);
+router.get('/verifications/all', getAllVerifications);
+router.get('/stats', getDashboardStats);
+
+// This is the important one for approval/rejection
+router.put('/verify-user', verifyUser);
+
+// Legacy route (keeping for compatibility)
+router.put('/verifications/update', updateVerificationStatus);
 
 module.exports = router;

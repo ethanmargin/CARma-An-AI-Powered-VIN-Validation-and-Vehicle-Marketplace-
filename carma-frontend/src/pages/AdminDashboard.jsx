@@ -363,50 +363,84 @@ function AdminDashboard() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - User Info & ID Details */}
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-lg mb-3">User Information</h4>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-sm text-gray-600">Name:</p>
-                      <p className="font-semibold">{selectedUser.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Email:</p>
-                      <p className="font-semibold">{selectedUser.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Role:</p>
-                      <p className="font-semibold capitalize">{selectedUser.role}</p>
-                    </div>
-                  </div>
-                </div>
+<div className="space-y-4">
+  <div className="bg-gray-50 p-4 rounded-lg">
+    <h4 className="font-semibold text-lg mb-3">User Information</h4>
+    <div className="space-y-2">
+      <div>
+        <p className="text-sm text-gray-600">Name:</p>
+        <p className="font-semibold">{selectedUser.name}</p>
+      </div>
+      <div>
+        <p className="text-sm text-gray-600">Email:</p>
+        <p className="font-semibold">{selectedUser.email}</p>
+      </div>
+      <div>
+        <p className="text-sm text-gray-600">Role:</p>
+        <p className="font-semibold capitalize">{selectedUser.role}</p>
+      </div>
+      <div>
+        <p className="text-sm text-gray-600">Verification Status:</p>
+        <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+          selectedUser.status === 'approved' ? 'bg-green-100 text-green-800' :
+          selectedUser.status === 'rejected' ? 'bg-red-100 text-red-800' :
+          'bg-yellow-100 text-yellow-800'
+        }`}>
+          {selectedUser.status}
+        </span>
+      </div>
+    </div>
+  </div>
 
-                {selectedUser.id_type && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-lg mb-2">ID Type</h4>
-                    <p className="font-semibold capitalize text-blue-800">
-                      {selectedUser.id_type.replace('_', ' ')}
-                    </p>
-                  </div>
-                )}
+  {selectedUser.id_type && (
+    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+      <h4 className="font-semibold text-lg mb-2 text-blue-900">ID Type</h4>
+      <p className="font-bold capitalize text-blue-800 text-lg">
+        {selectedUser.id_type.replace('_', ' ')}
+      </p>
+    </div>
+  )}
 
-                {selectedUser.id_data && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-lg mb-3">Submitted Information</h4>
-                    <div className="space-y-2 text-sm max-h-64 overflow-y-auto">
-                      {Object.entries(JSON.parse(selectedUser.id_data)).map(([key, value]) => (
-                        <div key={key} className="flex justify-between border-b border-gray-200 pb-2">
-                          <span className="text-gray-600 capitalize font-medium">
-                            {key.replace('_', ' ')}:
-                          </span>
-                          <span className="font-semibold text-right ml-4">{value || 'N/A'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+  {selectedUser.id_data && (
+    <div className="bg-gray-50 p-4 rounded-lg border border-gray-300">
+      <h4 className="font-semibold text-lg mb-3 flex items-center">
+        <svg className="w-5 h-5 mr-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Submitted ID Information
+      </h4>
+      <div className="space-y-2 max-h-96 overflow-y-auto">
+        {Object.entries(JSON.parse(selectedUser.id_data)).map(([key, value]) => {
+          // Format the key to be more readable
+          const formattedKey = key
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+          return (
+            <div key={key} className="flex justify-between items-start border-b border-gray-200 pb-2 last:border-0">
+              <span className="text-sm text-gray-600 font-medium w-1/2">
+                {formattedKey}:
+              </span>
+              <span className="text-sm font-semibold text-gray-900 text-right w-1/2 break-words">
+                {value || 'Not provided'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+  {/* Warning if no ID data */}
+  {!selectedUser.id_data && (
+    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+      <p className="text-sm text-yellow-800">
+        ⚠️ No ID details submitted. This might be an old upload before the ID form was added.
+      </p>
+    </div>
+  )}
+</div>
 
               {/* Right Column - ID Image */}
 <div>
