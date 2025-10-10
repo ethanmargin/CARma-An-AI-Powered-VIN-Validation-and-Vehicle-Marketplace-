@@ -21,8 +21,8 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
   };
 
   const imageUrl = vehicle.image_path 
-    ? `${import.meta.env.PROD ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com' : 'http://localhost:5000'}/${vehicle.image_path}`
-    : 'https://via.placeholder.com/400x300?text=No+Image';
+  ? `${import.meta.env.PROD ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com' : 'http://localhost:5000'}/${vehicle.image_path}`
+  : 'https://via.placeholder.com/400x300?text=No+Image';
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">

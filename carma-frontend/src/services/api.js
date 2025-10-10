@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// IMPORTANT: Replace with YOUR actual backend URL
+// Use production backend URL when deployed, localhost when developing locally
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com/api'  // ← YOUR BACKEND URL HERE
+  ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com/api'
   : 'http://localhost:5000/api';
 
 const API = axios.create({

@@ -415,8 +415,8 @@ function AdminDashboard() {
                   <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
                     <img 
                       src={`${import.meta.env.PROD 
-                        ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com/' 
-                        : 'http://localhost:5000'}/${selectedUser.submitted_id}`}
+  ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com' 
+  : 'http://localhost:5000'}/${selectedUser.submitted_id}`}
                       alt="User ID"
                       className="w-full h-auto"
                       onError={(e) => {
