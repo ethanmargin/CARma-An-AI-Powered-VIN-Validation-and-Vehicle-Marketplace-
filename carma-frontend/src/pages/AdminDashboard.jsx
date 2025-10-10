@@ -412,24 +412,20 @@ function AdminDashboard() {
               <div>
                 <h4 className="font-semibold text-lg mb-3">Submitted ID Image</h4>
                 {selectedUser.submitted_id ? (
-                  <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                    <img 
-                      src={`${import.meta.env.PROD 
-  ? 'https://carma-an-ai-powered-vin-validation-and.onrender.com' 
-  : 'http://localhost:5000'}/${selectedUser.submitted_id}`}
-                      alt="User ID"
-                      className="w-full h-auto"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/600x400?text=Image+Not+Found';
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-                    <p className="text-gray-500">No ID image submitted</p>
-                  </div>
-                )}
+  <img 
+    src={selectedUser.submitted_id}  // Now it's a full Cloudinary URL!
+    alt="User ID"
+    className="w-full h-auto border rounded-lg shadow-md"
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.src = 'https://via.placeholder.com/600x400?text=Image+Not+Found';
+    }}
+  />
+) : (
+  <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+    <p className="text-gray-500">No ID image submitted</p>
+  </div>
+)}
               </div>
             </div>
 

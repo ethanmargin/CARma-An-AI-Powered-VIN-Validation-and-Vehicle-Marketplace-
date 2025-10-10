@@ -1,45 +1,45 @@
 const db = require('../config/db');
 const multer = require('multer');
-const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/ids/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'id-' + uniqueSuffix + path.extname(file.originalname));
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Cloudinary storage for multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'carma/ids',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
+    transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
   }
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images and PDFs are allowed!'));
-    }
-  }
-}).single('id');  // ← Change to 'id' to match frontend
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+}).single('id');
 
 // Upload ID for verification
 exports.uploadID = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
+      console.error('Upload error:', err);
       return res.status(400).json({ success: false, message: err.message });
     }
 
     try {
       const userId = req.user.user_id;
-      const idPath = req.file ? req.file.path : null;
+      const idPath = req.file ? req.file.path : null; // This is now a Cloudinary URL!
       const idType = req.body.id_type;
       const idData = req.body.id_data ? JSON.parse(req.body.id_data) : {};
+
+      console.log('Upload ID Request:', { userId, idType, idPath });
 
       if (!idPath) {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -133,7 +133,7 @@ exports.getProfile = async (req, res) => {
     );
 
     const verificationResult = await db.query(
-      'SELECT status, date_verified FROM user_verification WHERE user_id = $1',
+      'SELECT status, submitted_id, date_verified FROM user_verification WHERE user_id = $1',
       [userId]
     );
 
