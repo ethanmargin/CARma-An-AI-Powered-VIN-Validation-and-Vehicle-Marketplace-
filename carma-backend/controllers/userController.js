@@ -33,48 +33,60 @@ const upload = multer({
 exports.uploadID = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
-      return res.status(400).json({ 
-        success: false, 
-        message: err.message 
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please upload an ID document' 
-      });
+      return res.status(400).json({ success: false, message: err.message });
     }
 
     try {
       const userId = req.user.user_id;
-      const idPath = req.file.path;
+      const idPath = req.file ? req.file.path : null;
+      const idType = req.body.id_type;
+      const idData = req.body.id_data ? JSON.parse(req.body.id_data) : {};
 
-      // Update user verification record
-      await db.query(
-        'UPDATE user_verification SET submitted_id = $1, status = $2 WHERE user_id = $3',
-        [idPath, 'pending', userId]
+      if (!idPath) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      if (!idType) {
+        return res.status(400).json({ success: false, message: 'ID type is required' });
+      }
+
+      // Check if user already has a verification record
+      const existing = await db.query(
+        'SELECT * FROM user_verification WHERE user_id = $1',
+        [userId]
       );
+
+      if (existing.rows.length > 0) {
+        // Update existing record
+        await db.query(
+          `UPDATE user_verification 
+           SET submitted_id = $1, status = $2, id_type = $3, id_data = $4, date_verified = NULL 
+           WHERE user_id = $5`,
+          [idPath, 'pending', idType, JSON.stringify(idData), userId]
+        );
+      } else {
+        // Create new record
+        await db.query(
+          `INSERT INTO user_verification (user_id, submitted_id, status, id_type, id_data) 
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, idPath, 'pending', idType, JSON.stringify(idData)]
+        );
+      }
 
       // Log the action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'ID_UPLOADED', `User uploaded ID for verification: ${req.file.filename}`]
+        [userId, 'ID_UPLOADED', `Uploaded ${idType} for verification`]
       );
 
-      res.json({
-        success: true,
-        message: 'ID uploaded successfully! Awaiting admin approval.',
-        filename: req.file.filename
+      res.json({ 
+        success: true, 
+        message: 'ID uploaded successfully! Awaiting verification.' 
       });
 
     } catch (error) {
       console.error('Upload ID error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Server error during ID upload',
-        error: error.message 
-      });
+      res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
   });
 };
