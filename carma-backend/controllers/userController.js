@@ -22,7 +22,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 }
 }).single('id');
 
 // Upload ID for verification
@@ -35,11 +35,11 @@ exports.uploadID = async (req, res) => {
 
     try {
       const userId = req.user.user_id;
-      const idPath = req.file ? req.file.path : null; // This is now a Cloudinary URL!
+      const idPath = req.file ? req.file.path : null; // Cloudinary URL
       const idType = req.body.id_type;
       const idData = req.body.id_data ? JSON.parse(req.body.id_data) : {};
 
-      console.log('Upload ID Request:', { userId, idType, idPath });
+      console.log('✅ Cloudinary Upload Success:', { userId, idType, cloudinaryUrl: idPath });
 
       if (!idPath) {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -56,7 +56,6 @@ exports.uploadID = async (req, res) => {
       );
 
       if (existing.rows.length > 0) {
-        // Update existing record
         await db.query(
           `UPDATE user_verification 
            SET submitted_id = $1, status = $2, id_type = $3, id_data = $4, date_verified = NULL 
@@ -64,7 +63,6 @@ exports.uploadID = async (req, res) => {
           [idPath, 'pending', idType, JSON.stringify(idData), userId]
         );
       } else {
-        // Create new record
         await db.query(
           `INSERT INTO user_verification (user_id, submitted_id, status, id_type, id_data) 
            VALUES ($1, $2, $3, $4, $5)`,
@@ -72,7 +70,6 @@ exports.uploadID = async (req, res) => {
         );
       }
 
-      // Log the action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
         [userId, 'ID_UPLOADED', `Uploaded ${idType} for verification`]
@@ -80,7 +77,8 @@ exports.uploadID = async (req, res) => {
 
       res.json({ 
         success: true, 
-        message: 'ID uploaded successfully! Awaiting verification.' 
+        message: 'ID uploaded successfully! Awaiting verification.',
+        imageUrl: idPath
       });
 
     } catch (error) {
@@ -133,7 +131,7 @@ exports.getProfile = async (req, res) => {
     );
 
     const verificationResult = await db.query(
-      'SELECT status, submitted_id, date_verified FROM user_verification WHERE user_id = $1',
+      'SELECT status, submitted_id, date_verified, id_type, id_data FROM user_verification WHERE user_id = $1',
       [userId]
     );
 

@@ -1,44 +1,45 @@
 const db = require('../config/db');
 const multer = require('multer');
 const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configure multer for vehicle images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/vehicles/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'vehicle-' + uniqueSuffix + path.extname(file.originalname));
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Cloudinary storage for vehicle images
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'carma/vehicles',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 1200, height: 800, crop: 'limit' }]
   }
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images are allowed!'));
-    }
-  }
+  limits: { fileSize: 5 * 1024 * 1024 }
 }).single('vehicleImage');
 
 // Add new vehicle
 exports.addVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
+      console.error('Vehicle upload error:', err);
       return res.status(400).json({ success: false, message: err.message });
     }
 
     try {
       const { make, model, year, price, description, vin_number } = req.body;
       const userId = req.user.user_id;
-      const imagePath = req.file ? req.file.path : null;
+      const imagePath = req.file ? req.file.path : null; // Cloudinary URL
+
+      console.log('✅ Vehicle Image Uploaded to Cloudinary:', imagePath);
 
       // Validate seller is verified
       const verificationCheck = await db.query(
