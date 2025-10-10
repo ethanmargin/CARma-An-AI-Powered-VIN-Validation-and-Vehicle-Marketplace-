@@ -15,19 +15,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|pdf/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Only images (JPEG, PNG) and PDFs are allowed!'));
+      cb(new Error('Only images and PDFs are allowed!'));
     }
   }
-}).single('idDocument');
+}).single('idImage');  // ← This might say 'idImage'
 
 // Upload ID for verification
 exports.uploadID = async (req, res) => {
