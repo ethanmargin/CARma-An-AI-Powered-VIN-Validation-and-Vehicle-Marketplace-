@@ -4,23 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import IDUpload from '../components/buyer/IDUpload';
 import VerificationStatus from '../components/common/VerificationStatus';
+import AddVehicleForm from '../components/seller/AddVehicleForm';
 
 function SellerDashboard() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    loadProfile();
+    loadData();
   }, []);
 
-  const loadProfile = async () => {
+  const loadData = async () => {
     try {
-      const response = await API.get('/users/profile');
-      setProfile(response.data);
+      const [profileRes, vehiclesRes] = await Promise.all([
+        API.get('/users/profile'),
+        API.get('/vehicles/my/vehicles')
+      ]);
+      setProfile(profileRes.data);
+      setVehicles(vehiclesRes.data.vehicles);
     } catch (error) {
-      console.error('Load profile error:', error);
+      console.error('Load data error:', error);
     } finally {
       setLoading(false);
     }
@@ -78,13 +85,6 @@ function SellerDashboard() {
             </div>
           </div>
 
-          {verificationStatus === 'pending' && hasSubmittedID && (
-            <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
-              <p className="font-semibold">⏳ Verification in Progress</p>
-              <p className="text-sm mt-1">Your ID is being reviewed. You'll be able to list vehicles once approved.</p>
-            </div>
-          )}
-
           {verificationStatus === 'approved' && (
             <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
               <p className="font-semibold">✓ Verified Seller!</p>
@@ -93,19 +93,57 @@ function SellerDashboard() {
           )}
         </div>
 
-        {/* ID Upload */}
+        {/* ID Upload if needed */}
         {(!hasSubmittedID || verificationStatus === 'rejected') && (
-          <IDUpload onUploadSuccess={loadProfile} />
+          <IDUpload onUploadSuccess={loadData} />
         )}
 
-        {/* Quick Actions */}
+        {/* Add Vehicle Section */}
         {isVerified && (
-          <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-            <h3 className="text-xl font-bold mb-4">Quick Actions</h3>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition">
-              + Add New Vehicle
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+            >
+              {showAddForm ? '− Cancel' : '+ Add New Vehicle'}
             </button>
-            <p className="text-gray-500 text-sm mt-2">Coming soon...</p>
+            
+            {showAddForm && (
+              <div className="mt-6">
+                <AddVehicleForm onSuccess={() => {
+                  setShowAddForm(false);
+                  loadData();
+                }} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* My Vehicles */}
+        {isVerified && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-bold mb-4">My Vehicles</h3>
+            
+            {vehicles.length === 0 ? (
+              <p className="text-gray-500">No vehicles listed yet. Add your first vehicle above!</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {vehicles.map((vehicle) => (
+                  <div key={vehicle.vehicle_id} className="border rounded-lg p-4">
+                    <h4 className="font-bold">{vehicle.year} {vehicle.make} {vehicle.model}</h4>
+                    <p className="text-green-600 font-semibold">${parseFloat(vehicle.price).toLocaleString()}</p>
+                    <p className="text-sm text-gray-500">VIN: {vehicle.vin_number}</p>
+                    <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
+                      vehicle.vin_status === 'approved' ? 'bg-green-100 text-green-800' :
+                      vehicle.vin_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {vehicle.vin_status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -113,17 +151,21 @@ function SellerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">My Vehicles</h3>
-            <p className="text-3xl font-bold text-blue-600">0</p>
+            <p className="text-3xl font-bold text-blue-600">{vehicles.length}</p>
           </div>
 
           <div className="bg-green-50 p-6 rounded-lg border border-green-200">
             <h3 className="text-lg font-semibold text-green-800 mb-2">Verified</h3>
-            <p className="text-3xl font-bold text-green-600">0</p>
+            <p className="text-3xl font-bold text-green-600">
+              {vehicles.filter(v => v.vin_status === 'approved').length}
+            </p>
           </div>
 
           <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
             <h3 className="text-lg font-semibold text-yellow-800 mb-2">Pending</h3>
-            <p className="text-3xl font-bold text-yellow-600">0</p>
+            <p className="text-3xl font-bold text-yellow-600">
+              {vehicles.filter(v => v.vin_status === 'pending').length}
+            </p>
           </div>
         </div>
       </div>

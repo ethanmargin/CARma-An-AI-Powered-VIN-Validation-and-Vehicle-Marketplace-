@@ -38,6 +38,10 @@ app.get('/api/test-db', async (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/vehicles', require('./routes/vehicleRoutes')); 
 
 const PORT = process.env.PORT || 5000;
 
