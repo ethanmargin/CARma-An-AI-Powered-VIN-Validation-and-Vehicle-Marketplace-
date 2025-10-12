@@ -93,7 +93,7 @@ function BuyerDashboard() {
         {/* Verification Status Card */}
 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
   <h2 className="text-2xl font-bold mb-4">Account Verification</h2>
-  <h3 className="text-2xl font-bold mb-4">Account Dashboard</h3>
+  <h3 className="text-2xl font-bold mb-4">Buyer Dashboard</h3>
   
   {/* Add Welcome Message Here */}
   <div className="mb-4">
