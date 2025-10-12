@@ -58,7 +58,7 @@ function SellerDashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-green-600">CARma</h1>
-              <span className="ml-4 text-gray-600">Seller Dashboard</span>
+              
             </div>
             <div className="flex items-center space-x-4">
   <button
