@@ -75,7 +75,7 @@ function BuyerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {user?.name}!</span>
+              
               <button
                 onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
@@ -90,14 +90,25 @@ function BuyerDashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Verification Status Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Account Verification</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 mb-2">Your verification status:</p>
-              <VerificationStatus status={verificationStatus} />
-            </div>
-          </div>
+        {/* Verification Status Card */}
+<div className="bg-white rounded-lg shadow-md p-6 mb-6">
+  <h2 className="text-2xl font-bold mb-4">Account Verification</h2>
+  <h3 className="text-2xl font-bold mb-4">Account Dashboard</h3>
+  
+  {/* Add Welcome Message Here */}
+  <div className="mb-4">
+    <p className="text-gray-600 text-lg">Welcome, <span className="font-semibold text-gray-800">{user?.name}!</span></p>
+  </div>
+
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-gray-600 mb-2">Your verification status:</p>
+      
+      <VerificationStatus status={verificationStatus} />
+    </div>
+  </div>
+
+  {/* Rest of the card... */}
 
           {verificationStatus === 'pending' && hasSubmittedID && (
             <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
