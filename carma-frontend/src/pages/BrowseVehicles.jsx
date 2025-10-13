@@ -70,13 +70,13 @@ function BrowseVehicles() {
               </button>
               <button
                 onClick={() => navigate('/buyer/browse')}
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
               >
                 Browse Vehicles
               </button>
               <button
                 onClick={() => navigate('/buyer/bookmarks')}
-                className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
+                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Saved 
               </button>
