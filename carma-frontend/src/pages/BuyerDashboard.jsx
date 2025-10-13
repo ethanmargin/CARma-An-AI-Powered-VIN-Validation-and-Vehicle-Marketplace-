@@ -75,7 +75,7 @@ function BuyerDashboard() {
                 onClick={() => navigate('/buyer/bookmarks')}
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
               >
-                Saved (❤️)
+                Saved
               </button>
               <button
                 onClick={handleLogout}
@@ -213,7 +213,7 @@ function BuyerDashboard() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Saved Vehicles ❤️</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Saved Vehicles</h3>
                 <p className="text-gray-600">View your bookmarked vehicles</p>
               </div>
               <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">

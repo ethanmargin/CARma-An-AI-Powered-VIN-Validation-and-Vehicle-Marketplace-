@@ -68,7 +68,7 @@ function BookmarksPage() {
                 onClick={() => navigate('/buyer/bookmarks')}
                 className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
               >
-                Saved (❤️)
+                Saved 
               </button>
               <button
                 onClick={handleLogout}
@@ -139,7 +139,7 @@ function BookmarksPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Saved Vehicles ❤️</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">Saved Vehicles</h2>
           <p className="text-gray-600">Your bookmarked vehicles</p>
         </div>
 
