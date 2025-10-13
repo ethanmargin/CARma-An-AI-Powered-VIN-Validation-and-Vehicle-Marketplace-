@@ -10,6 +10,7 @@ function BrowseVehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, verified, pending
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadVehicles();
@@ -52,41 +53,96 @@ function BrowseVehicles() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            {/* Logo */}
+            <div className="flex items-center">
               <h1 className="text-2xl font-bold text-blue-600">CARma</h1>
-              <div className="hidden md:flex space-x-4">
-                <button
-                  onClick={() => navigate('/buyer/dashboard')}
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => navigate('/buyer/browse')}
-                  className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
-                >
-                  Browse Vehicles
-                </button>
-                <button
-                  onClick={() => navigate('/buyer/bookmarks')}
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Saved (❤️)
-                </button>
-              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/buyer/dashboard')}
+                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/buyer/browse')}
+                className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
+              >
+                Browse Vehicles
+              </button>
+              <button
+                onClick={() => navigate('/buyer/bookmarks')}
+                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Saved (❤️)
+              </button>
               <button
                 onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition ml-4"
               >
                 Logout
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden flex items-center">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-gray-700 hover:text-blue-600 focus:outline-none p-2"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? (
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          {mobileMenuOpen && (
+            <div className="md:hidden pb-4 border-t border-gray-200 mt-2">
+              <div className="flex flex-col space-y-2 pt-2">
+                <button
+                  onClick={() => { navigate('/buyer/dashboard'); setMobileMenuOpen(false); }}
+                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <span className="mr-2">📊</span>
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => { navigate('/buyer/browse'); setMobileMenuOpen(false); }}
+                  className="text-left px-4 py-3 rounded-md text-sm font-medium bg-blue-50 text-blue-600 border-l-4 border-blue-600"
+                >
+                  <span className="mr-2">🚗</span>
+                  Browse Vehicles
+                </button>
+                <button
+                  onClick={() => { navigate('/buyer/bookmarks'); setMobileMenuOpen(false); }}
+                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <span className="mr-2">❤️</span>
+                  Saved
+                </button>
+                <button
+                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  <span className="mr-2">🚪</span>
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
