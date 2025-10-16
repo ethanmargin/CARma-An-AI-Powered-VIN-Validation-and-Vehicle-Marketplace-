@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
 import VehicleCard from '../components/common/VehicleCard';
+import VehicleDetailsModal from '../components/buyer/VehicleDetailsModal'; // 🆕 NEW
 
 function BrowseVehicles() {
   const { user, logout } = useContext(AuthContext);
@@ -11,6 +12,7 @@ function BrowseVehicles() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, verified, pending
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState(null); // 🆕 NEW
 
   useEffect(() => {
     loadVehicles();
@@ -39,6 +41,16 @@ function BrowseVehicles() {
     return vehicles;
   };
 
+  // 🆕 NEW: Handle view details
+  const handleViewDetails = (vehicle) => {
+    setSelectedVehicle(vehicle);
+  };
+
+  // 🆕 NEW: Handle close details modal
+  const handleCloseDetails = () => {
+    setSelectedVehicle(null);
+  };
+
   const filteredVehicles = getFilteredVehicles();
 
   if (loading) {
@@ -60,7 +72,7 @@ function BrowseVehicles() {
               <h1 className="text-2xl font-bold text-blue-600">CARma</h1>
             </div>
 
-                        {/* Desktop Navigation */}
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
               <button
                 onClick={() => navigate('/buyer/dashboard')}
@@ -78,7 +90,7 @@ function BrowseVehicles() {
                 onClick={() => navigate('/buyer/bookmarks')}
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
               >
-                Saved 
+                Saved
               </button>
               <button
                 onClick={handleLogout}
@@ -201,11 +213,20 @@ function BrowseVehicles() {
                 key={vehicle.vehicle_id} 
                 vehicle={vehicle}
                 onBookmark={loadVehicles}
+                onViewDetails={handleViewDetails} // 🆕 NEW
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* 🆕 Vehicle Details Modal */}
+      {selectedVehicle && (
+        <VehicleDetailsModal
+          vehicle={selectedVehicle}
+          onClose={handleCloseDetails}
+        />
+      )}
     </div>
   );
 }

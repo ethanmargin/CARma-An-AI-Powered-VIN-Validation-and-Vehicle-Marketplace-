@@ -13,7 +13,8 @@ function AddVehicleForm({ onSuccess }) {
     description: '',
     vin_number: '',
     mileage: '',
-    location: ''
+    location: '',
+    transmission: ''
   });
   
   const [image, setImage] = useState(null);
@@ -53,6 +54,7 @@ function AddVehicleForm({ onSuccess }) {
     data.append('vin_number', formData.vin_number);
     data.append('mileage', formData.mileage);
     data.append('location', formData.location);
+    data.append('transmission:', formData.transmission);
     
     if (image) {
       data.append('vehicleImage', image);
@@ -72,7 +74,8 @@ function AddVehicleForm({ onSuccess }) {
         description: '', 
         vin_number: '',
         mileage: '',
-        location: ''
+        location: '',
+        transmission: ''
       });
       setImage(null);
       setPreview(null);
@@ -183,6 +186,20 @@ function AddVehicleForm({ onSuccess }) {
               placeholder="Manila, Philippines"
             />
           </div>
+
+          <div>
+  <label className="block text-gray-700 font-medium mb-2">Transmission</label>
+  <select
+    name="transmission"
+    value={formData.transmission}
+    onChange={handleChange}
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+  >
+    <option value="">Select Transmission</option>
+    <option value="Automatic">Automatic</option>
+    <option value="Manual">Manual</option>
+  </select>
+</div>
         </div>
 
         <div>

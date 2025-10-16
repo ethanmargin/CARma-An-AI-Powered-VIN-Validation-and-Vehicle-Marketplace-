@@ -25,7 +25,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 }).single('vehicleImage');
 
-// Add new vehicle
+
+//add Vehicle
 exports.addVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -34,9 +35,9 @@ exports.addVehicle = async (req, res) => {
     }
 
     try {
-      const { make, model, year, price, description, vin_number, mileage, location } = req.body;
+      const { make, model, year, price, description, vin_number, mileage, location, transmission } = req.body;
       const userId = req.user.user_id;
-      const imagePath = req.file ? req.file.path : null; // Cloudinary URL
+      const imagePath = req.file ? req.file.path : null;
 
       console.log('✅ Vehicle Image Uploaded to Cloudinary:', imagePath);
 
@@ -74,15 +75,15 @@ exports.addVehicle = async (req, res) => {
         });
       }
 
-      // Insert vehicle with new fields (mileage, location)
+      // Insert vehicle with transmission field
       const result = await db.query(
-        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
+        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) 
          RETURNING *`,
-        [userId, make, model, year, price, description, vin_number, imagePath, mileage, location]
+        [userId, make, model, year, price, description, vin_number, imagePath, mileage, location, transmission]
       );
 
-      // Create VIN verification record (pending)
+      // Create VIN verification record
       await db.query(
         'INSERT INTO vin_verification (vehicle_id, status) VALUES ($1, $2)',
         [result.rows[0].vehicle_id, 'pending']
@@ -198,7 +199,7 @@ exports.updateVehicle = async (req, res) => {
     try {
       const { vehicleId } = req.params;
       const userId = req.user.user_id;
-      const { make, model, year, price, description, mileage, location } = req.body;
+      const { make, model, year, price, description, mileage, location, transmission } = req.body;
 
       // Check ownership
       const ownerCheck = await db.query(
@@ -216,18 +217,18 @@ exports.updateVehicle = async (req, res) => {
       // Handle new image if uploaded
       let imagePath = ownerCheck.rows[0].image_path;
       if (req.file) {
-        imagePath = req.file.path; // Cloudinary URL
+        imagePath = req.file.path;
         console.log('✅ New vehicle image uploaded:', imagePath);
       }
 
-      // Update vehicle
+      // Update vehicle with transmission
       const updateResult = await db.query(
         `UPDATE vehicles 
          SET make = $1, model = $2, year = $3, price = $4, 
-             description = $5, image_path = $6, mileage = $7, location = $8
-         WHERE vehicle_id = $9 AND user_id = $10
+             description = $5, image_path = $6, mileage = $7, location = $8, transmission = $9
+         WHERE vehicle_id = $10 AND user_id = $11
          RETURNING *`,
-        [make, model, year, price, description, imagePath, mileage, location, vehicleId, userId]
+        [make, model, year, price, description, imagePath, mileage, location, transmission, vehicleId, userId]
       );
 
       res.json({

@@ -108,8 +108,11 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
             VIN: {vehicle.vin_number?.substring(0, 8)}...
           </span>
           
-          <button className="text-green-600 hover:text-green-700 font-semibold text-sm">
-            View Details →
+          <button
+            onClick={() => onViewDetails(vehicle)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition text-sm font-medium"
+          >
+            👁️ View Details
           </button>
         </div>
       </div>
