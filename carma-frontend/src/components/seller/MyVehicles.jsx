@@ -97,6 +97,13 @@ function MyVehicles() {
                   </p>
                 )}
 
+                {/* After location, add transmission */}
+{vehicle.transmission && (
+  <p className="text-sm text-gray-600 mb-2">
+    ⚙️ {vehicle.transmission}
+  </p>
+)}
+
                 <p className="text-sm text-gray-600 mb-2">VIN: {vehicle.vin_number}</p>
 
                 <div className="mb-3">

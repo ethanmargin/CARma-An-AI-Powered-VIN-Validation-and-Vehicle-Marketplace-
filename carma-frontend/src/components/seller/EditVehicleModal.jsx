@@ -9,7 +9,8 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     price: '',
     description: '',
     mileage: '',
-    location: ''
+    location: '',
+    transmission: '' // 🆕 NEW
   });
   const [vehicleImage, setVehicleImage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,8 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
         price: vehicle.price || '',
         description: vehicle.description || '',
         mileage: vehicle.mileage || '',
-        location: vehicle.location || ''
+        location: vehicle.location || '',
+        transmission: vehicle.transmission || '' // 🆕 NEW
       });
     }
   }, [vehicle]);
@@ -51,6 +53,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
       data.append('description', formData.description);
       data.append('mileage', formData.mileage);
       data.append('location', formData.location);
+      data.append('transmission', formData.transmission); // 🆕 NEW
       
       if (vehicleImage) {
         data.append('vehicleImage', vehicleImage);
@@ -93,7 +96,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Make</label>
+                <label className="block text-gray-700 font-medium mb-2">Make *</label>
                 <input
                   type="text"
                   name="make"
@@ -105,7 +108,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Model</label>
+                <label className="block text-gray-700 font-medium mb-2">Model *</label>
                 <input
                   type="text"
                   name="model"
@@ -117,7 +120,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Year</label>
+                <label className="block text-gray-700 font-medium mb-2">Year *</label>
                 <input
                   type="number"
                   name="year"
@@ -129,7 +132,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Price (₱)</label>
+                <label className="block text-gray-700 font-medium mb-2">Price (₱) *</label>
                 <input
                   type="number"
                   name="price"
@@ -160,6 +163,21 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
+              </div>
+
+              {/* 🆕 NEW: Transmission Field */}
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Transmission</label>
+                <select
+                  name="transmission"
+                  value={formData.transmission}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                >
+                  <option value="">Select Transmission</option>
+                  <option value="Automatic">Automatic</option>
+                  <option value="Manual">Manual</option>
+                </select>
               </div>
             </div>
 

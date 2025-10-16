@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import API from '../../services/api';
 
-function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
+function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }) {
   const [bookmarked, setBookmarked] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -71,22 +71,30 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
 
         {vehicle.price && (
           <p className="text-2xl font-bold text-green-600 mb-2">
-            ${parseFloat(vehicle.price).toLocaleString()}
+            ₱{parseFloat(vehicle.price).toLocaleString()}
           </p>
         )}
 
-        {/* 🆕 ADD THESE */}
-{vehicle.mileage && (
-  <p className="text-sm text-gray-600 mb-1">
-    📊 {parseInt(vehicle.mileage).toLocaleString()} km
-  </p>
-)}
+        {/* Mileage */}
+        {vehicle.mileage && (
+          <p className="text-sm text-gray-600 mb-1">
+            📊 {parseInt(vehicle.mileage).toLocaleString()} km
+          </p>
+        )}
 
-{vehicle.location && (
-  <p className="text-sm text-gray-600 mb-2">
-    📍 {vehicle.location}
-  </p>
-)}
+        {/* Location */}
+        {vehicle.location && (
+          <p className="text-sm text-gray-600 mb-1">
+            📍 {vehicle.location}
+          </p>
+        )}
+
+        {/* Transmission */}
+        {vehicle.transmission && (
+          <p className="text-sm text-gray-600 mb-2">
+            ⚙️ {vehicle.transmission}
+          </p>
+        )}
 
         {vehicle.description && (
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -108,11 +116,12 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
             VIN: {vehicle.vin_number?.substring(0, 8)}...
           </span>
           
-          <button
-            onClick={() => onViewDetails(vehicle)}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition text-sm font-medium"
+          {/* View Details Button - Now Functional */}
+          <button 
+            onClick={() => onViewDetails && onViewDetails(vehicle)}
+            className="text-green-600 hover:text-green-700 font-semibold text-sm hover:underline transition"
           >
-            👁️ View Details
+            View Details →
           </button>
         </div>
       </div>
