@@ -11,7 +11,9 @@ function AddVehicleForm({ onSuccess }) {
     year: '',
     price: '',
     description: '',
-    vin_number: ''
+    vin_number: '',
+    mileage: '',
+    location: ''
   });
   
   const [image, setImage] = useState(null);
@@ -49,6 +51,9 @@ function AddVehicleForm({ onSuccess }) {
     data.append('price', formData.price);
     data.append('description', formData.description);
     data.append('vin_number', formData.vin_number);
+    data.append('mileage', formData.mileage);
+    data.append('location', formData.location);
+    
     if (image) {
       data.append('vehicleImage', image);
     }
@@ -59,7 +64,16 @@ function AddVehicleForm({ onSuccess }) {
       });
       
       setSuccess('Vehicle added successfully! Awaiting VIN verification.');
-      setFormData({ make: '', model: '', year: '', price: '', description: '', vin_number: '' });
+      setFormData({ 
+        make: '', 
+        model: '', 
+        year: '', 
+        price: '', 
+        description: '', 
+        vin_number: '',
+        mileage: '',
+        location: ''
+      });
       setImage(null);
       setPreview(null);
       
@@ -90,7 +104,7 @@ function AddVehicleForm({ onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Make</label>
+            <label className="block text-gray-700 font-medium mb-2">Make *</label>
             <input
               type="text"
               name="make"
@@ -103,7 +117,7 @@ function AddVehicleForm({ onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Model</label>
+            <label className="block text-gray-700 font-medium mb-2">Model *</label>
             <input
               type="text"
               name="model"
@@ -116,7 +130,7 @@ function AddVehicleForm({ onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Year</label>
+            <label className="block text-gray-700 font-medium mb-2">Year *</label>
             <input
               type="number"
               name="year"
@@ -131,7 +145,7 @@ function AddVehicleForm({ onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Price ($)</label>
+            <label className="block text-gray-700 font-medium mb-2">Price (₱) *</label>
             <input
               type="number"
               name="price"
@@ -141,13 +155,38 @@ function AddVehicleForm({ onSuccess }) {
               min="0"
               step="0.01"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-              placeholder="25000"
+              placeholder="500000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">Mileage (km)</label>
+            <input
+              type="number"
+              name="mileage"
+              value={formData.mileage}
+              onChange={handleChange}
+              min="0"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              placeholder="50000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">Location</label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              placeholder="Manila, Philippines"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-gray-700 font-medium mb-2">VIN Number</label>
+          <label className="block text-gray-700 font-medium mb-2">VIN Number *</label>
           <input
             type="text"
             name="vin_number"

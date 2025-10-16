@@ -75,6 +75,19 @@ function VehicleCard({ vehicle, onBookmark, showBookmark = true }) {
           </p>
         )}
 
+        {/* 🆕 ADD THESE */}
+{vehicle.mileage && (
+  <p className="text-sm text-gray-600 mb-1">
+    📊 {parseInt(vehicle.mileage).toLocaleString()} km
+  </p>
+)}
+
+{vehicle.location && (
+  <p className="text-sm text-gray-600 mb-2">
+    📍 {vehicle.location}
+  </p>
+)}
+
         {vehicle.description && (
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {vehicle.description}

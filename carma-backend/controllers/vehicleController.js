@@ -1,6 +1,5 @@
 const db = require('../config/db');
 const multer = require('multer');
-const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -35,11 +34,19 @@ exports.addVehicle = async (req, res) => {
     }
 
     try {
-      const { make, model, year, price, description, vin_number } = req.body;
+      const { make, model, year, price, description, vin_number, mileage, location } = req.body;
       const userId = req.user.user_id;
       const imagePath = req.file ? req.file.path : null; // Cloudinary URL
 
       console.log('✅ Vehicle Image Uploaded to Cloudinary:', imagePath);
+
+      // Validation
+      if (!make || !model || !vin_number || !year || !price) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Please provide all required fields' 
+        });
+      }
 
       // Validate seller is verified
       const verificationCheck = await db.query(
@@ -54,12 +61,25 @@ exports.addVehicle = async (req, res) => {
         });
       }
 
-      // Insert vehicle
+      // Check if VIN already exists
+      const vinCheck = await db.query(
+        'SELECT * FROM vehicles WHERE vin_number = $1',
+        [vin_number]
+      );
+
+      if (vinCheck.rows.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'A vehicle with this VIN already exists' 
+        });
+      }
+
+      // Insert vehicle with new fields (mileage, location)
       const result = await db.query(
-        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) 
+        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) 
          RETURNING *`,
-        [userId, make, model, year, price, description, vin_number, imagePath]
+        [userId, make, model, year, price, description, vin_number, imagePath, mileage, location]
       );
 
       // Create VIN verification record (pending)
@@ -135,28 +155,136 @@ exports.getMyVehicles = async (req, res) => {
 // Get single vehicle details
 exports.getVehicleById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { vehicleId } = req.params;
+    const userId = req.user.user_id;
 
-    const result = await db.query(`
-      SELECT 
-        v.*,
-        u.name as seller_name,
-        u.email as seller_email,
-        vv.status as vin_status
-      FROM vehicles v
-      JOIN users u ON v.user_id = u.user_id
-      LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
-      WHERE v.vehicle_id = $1
-    `, [id]);
+    const result = await db.query(
+      `SELECT v.*, vv.status as vin_status
+       FROM vehicles v
+       LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
+       WHERE v.vehicle_id = $1 AND v.user_id = $2`,
+      [vehicleId, userId]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
     }
 
-    res.json({ success: true, vehicle: result.rows[0] });
+    res.json({
+      success: true,
+      vehicle: result.rows[0]
+    });
+
   } catch (error) {
     console.error('Get vehicle error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get vehicle'
+    });
+  }
+};
+
+// Update vehicle
+exports.updateVehicle = async (req, res) => {
+  upload(req, res, async function (err) {
+    if (err) {
+      console.error('Vehicle upload error:', err);
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    try {
+      const { vehicleId } = req.params;
+      const userId = req.user.user_id;
+      const { make, model, year, price, description, mileage, location } = req.body;
+
+      // Check ownership
+      const ownerCheck = await db.query(
+        'SELECT * FROM vehicles WHERE vehicle_id = $1 AND user_id = $2',
+        [vehicleId, userId]
+      );
+
+      if (ownerCheck.rows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to edit this vehicle'
+        });
+      }
+
+      // Handle new image if uploaded
+      let imagePath = ownerCheck.rows[0].image_path;
+      if (req.file) {
+        imagePath = req.file.path; // Cloudinary URL
+        console.log('✅ New vehicle image uploaded:', imagePath);
+      }
+
+      // Update vehicle
+      const updateResult = await db.query(
+        `UPDATE vehicles 
+         SET make = $1, model = $2, year = $3, price = $4, 
+             description = $5, image_path = $6, mileage = $7, location = $8
+         WHERE vehicle_id = $9 AND user_id = $10
+         RETURNING *`,
+        [make, model, year, price, description, imagePath, mileage, location, vehicleId, userId]
+      );
+
+      res.json({
+        success: true,
+        message: 'Vehicle updated successfully',
+        vehicle: updateResult.rows[0]
+      });
+
+    } catch (error) {
+      console.error('Update vehicle error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update vehicle'
+      });
+    }
+  });
+};
+
+// Delete vehicle
+exports.deleteVehicle = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const userId = req.user.user_id;
+
+    // Check ownership
+    const ownerCheck = await db.query(
+      'SELECT * FROM vehicles WHERE vehicle_id = $1 AND user_id = $2',
+      [vehicleId, userId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this vehicle'
+      });
+    }
+
+    // Delete bookmarks first
+    await db.query('DELETE FROM bookmarks WHERE vehicle_id = $1', [vehicleId]);
+
+    // Delete VIN verification
+    await db.query('DELETE FROM vin_verification WHERE vehicle_id = $1', [vehicleId]);
+
+    // Delete vehicle
+    await db.query('DELETE FROM vehicles WHERE vehicle_id = $1', [vehicleId]);
+
+    res.json({
+      success: true,
+      message: 'Vehicle deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete vehicle error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete vehicle'
+    });
   }
 };
 

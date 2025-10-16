@@ -1,23 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const {
-  addVehicle,
-  getAllVehicles,
-  getMyVehicles,
-  getVehicleById,
-  bookmarkVehicle,
-  getBookmarkedVehicles
-} = require('../controllers/vehicleController');
-const { protect, authorize } = require('../middleware/auth');
+const vehicleController = require('../controllers/vehicleController');
+const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware');
 
-// Public routes
-router.get('/all', getAllVehicles);
-router.get('/:id', getVehicleById);
+// Existing routes...
+router.post('/add', protect, upload.single('vehicleImage'), vehicleController.addVehicle);
+router.get('/my', protect, vehicleController.getMyVehicles);
+router.get('/all', protect, vehicleController.getAllVehicles);
 
-// Protected routes
-router.post('/add', protect, authorize('seller'), addVehicle);
-router.get('/my/vehicles', protect, authorize('seller'), getMyVehicles);
-router.post('/bookmark', protect, bookmarkVehicle);
-router.get('/my/bookmarks', protect, getBookmarkedVehicles);
+// 🆕 NEW ROUTES
+router.get('/:vehicleId', protect, vehicleController.getVehicleById);
+router.put('/:vehicleId', protect, upload.single('vehicleImage'), vehicleController.updateVehicle);
+router.delete('/:vehicleId', protect, vehicleController.deleteVehicle);
+
+// Bookmarks
+router.post('/:vehicleId/bookmark', protect, vehicleController.toggleBookmark);
+router.get('/my/bookmarks', protect, vehicleController.getMyBookmarks);
 
 module.exports = router;
