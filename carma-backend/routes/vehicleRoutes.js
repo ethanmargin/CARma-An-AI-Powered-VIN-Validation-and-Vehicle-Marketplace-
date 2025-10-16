@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
-const { protect } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
+const { protect } = require('../middleware/auth');
+
 
 // Existing routes...
 router.post('/add', protect, upload.single('vehicleImage'), vehicleController.addVehicle);
