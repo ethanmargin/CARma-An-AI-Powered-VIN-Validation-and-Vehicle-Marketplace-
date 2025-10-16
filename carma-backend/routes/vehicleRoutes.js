@@ -4,18 +4,16 @@ const vehicleController = require('../controllers/vehicleController');
 const { protect } = require('../middleware/auth');
 
 
-// Existing routes...
-router.post('/add', protect, upload.single('vehicleImage'), vehicleController.addVehicle);
+// Vehicle routes - upload is handled INSIDE the controller functions
+router.post('/add', protect, vehicleController.addVehicle);
 router.get('/my', protect, vehicleController.getMyVehicles);
 router.get('/all', protect, vehicleController.getAllVehicles);
-
-// 🆕 NEW ROUTES
 router.get('/:vehicleId', protect, vehicleController.getVehicleById);
-router.put('/:vehicleId', protect, upload.single('vehicleImage'), vehicleController.updateVehicle);
+router.put('/:vehicleId', protect, vehicleController.updateVehicle);
 router.delete('/:vehicleId', protect, vehicleController.deleteVehicle);
 
 // Bookmarks
-router.post('/:vehicleId/bookmark', protect, vehicleController.toggleBookmark);
-router.get('/my/bookmarks', protect, vehicleController.getMyBookmarks);
+router.post('/bookmark', protect, vehicleController.bookmarkVehicle);
+router.get('/my/bookmarks', protect, vehicleController.getBookmarkedVehicles);
 
 module.exports = router;
