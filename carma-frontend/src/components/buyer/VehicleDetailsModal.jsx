@@ -131,6 +131,9 @@ function VehicleDetailsModal({ vehicle, onClose }) {
               <p className="text-gray-700 break-words">
                 <span className="font-semibold">Email:</span> {vehicle.seller_email}
               </p>
+              <p className="text-gray-700 break-words">
+                <span className="font-semibold">Number:</span> {vehicle.seller_number}
+              </p>
             </div>
 
             {/* Close Button */}
