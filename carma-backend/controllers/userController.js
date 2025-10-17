@@ -120,25 +120,43 @@ exports.getVerificationStatus = async (req, res) => {
   }
 };
 
-// Get user profile
+// Get user profile - UPDATED
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.user_id;
 
-    const userResult = await db.query(
-      'SELECT user_id, name, email, role, created_at FROM users WHERE user_id = $1',
+    const result = await db.query(
+      `SELECT u.user_id, u.name, u.email, u.role, u.mobile_number, u.created_at,
+              uv.status, uv.submitted_id, uv.id_type, uv.date_verified
+       FROM users u
+       LEFT JOIN user_verification uv ON u.user_id = uv.user_id
+       WHERE u.user_id = $1`,
       [userId]
     );
 
-    const verificationResult = await db.query(
-      'SELECT status, submitted_id, date_verified, id_type, id_data FROM user_verification WHERE user_id = $1',
-      [userId]
-    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
+    const user = result.rows[0];
+
+    // Return data in the format expected by frontend
     res.json({
-      success: true,
-      user: userResult.rows[0],
-      verification: verificationResult.rows[0] || { status: 'pending' }
+      user_id: user.user_id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      mobile_number: user.mobile_number,
+      created_at: user.created_at,
+      verification: {
+        status: user.status || 'pending',
+        submitted_id: user.submitted_id,
+        id_type: user.id_type,
+        date_verified: user.date_verified
+      }
     });
 
   } catch (error) {
