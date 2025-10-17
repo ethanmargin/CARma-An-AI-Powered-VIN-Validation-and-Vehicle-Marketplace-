@@ -123,18 +123,25 @@ function VehicleDetailsModal({ vehicle, onClose }) {
             )}
 
             {/* Seller Information */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="text-lg font-bold text-blue-800 mb-2">Seller Information</h3>
-              <p className="text-gray-700 break-words">
-                <span className="font-semibold">Name:</span> {vehicle.seller_name}
-              </p>
-              <p className="text-gray-700 break-words">
-                <span className="font-semibold">Email:</span> {vehicle.seller_email}
-              </p>
-              <p className="text-gray-700 break-words">
-                <span className="font-semibold">Number:</span> {vehicle.seller_number}
-              </p>
-            </div>
+<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+  <h3 className="text-lg font-bold text-blue-800 mb-2">Seller Information</h3>
+  <p className="text-gray-700 break-words">
+    <span className="font-semibold">Name:</span> {vehicle.seller_name}
+  </p>
+  <p className="text-gray-700 break-words">
+    <span className="font-semibold">Email:</span> {vehicle.seller_email}
+  </p>
+  {vehicle.seller_mobile && (
+    <p className="text-gray-700 break-words">
+      <span className="font-semibold">Mobile:</span> 📱 {vehicle.seller_mobile}
+    </p>
+  )}
+  {!vehicle.seller_mobile && (
+    <p className="text-gray-500 text-sm italic">
+      Mobile number not provided by seller
+    </p>
+  )}
+</div>
 
             {/* Close Button */}
             <button
