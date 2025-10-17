@@ -51,32 +51,34 @@ function BookmarksPage() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/buyer/dashboard')}
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => navigate('/buyer/browse')}
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Browse Vehicles
-              </button>
-              <button
-                onClick={() => navigate('/buyer/bookmarks')}
-                className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
-              >
-                Saved 
-              </button>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition ml-4"
-              >
-                Logout
-              </button>
-            </div>
+<div className="hidden md:flex items-center space-x-4">
+  <button
+    onClick={() => navigate('/buyer/dashboard')}
+    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+  >
+    Dashboard
+  </button>
+  <button
+    onClick={() => navigate('/buyer/browse')}
+    className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-blue-600"
+  >
+    Browse Vehicles
+  </button>
+  <button
+    onClick={() => navigate('/buyer/bookmarks')}
+    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+  >
+    Saved
+  </button>
+  {/* Profile Button */}
+  <button
+    onClick={() => navigate('/profile')}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center space-x-2"
+  >
+    <span>👤</span>
+    <span>Profile</span>
+  </button>
+</div>
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center">
