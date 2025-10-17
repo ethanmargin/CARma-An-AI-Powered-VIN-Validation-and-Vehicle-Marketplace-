@@ -106,40 +106,48 @@ function BuyerDashboard() {
           </div>
 
           {/* Mobile Menu Dropdown */}
-          {mobileMenuOpen && (
-            <div className="md:hidden pb-4 border-t border-gray-200 mt-2">
-              <div className="flex flex-col space-y-2 pt-2">
-                <button
-                  onClick={() => { navigate('/buyer/dashboard'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium bg-blue-50 text-blue-600 border-l-4 border-blue-600"
-                >
-                  <span className="mr-2">📊</span>
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => { navigate('/buyer/browse'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <span className="mr-2">🚗</span>
-                  Browse Vehicles
-                </button>
-                <button
-                  onClick={() => { navigate('/buyer/bookmarks'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <span className="mr-2">❤️</span>
-                  Saved
-                </button>
-                <button
-                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
-                >
-                  <span className="mr-2">🚪</span>
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
+{mobileMenuOpen && (
+  <div className="md:hidden pb-4 border-t border-gray-200 mt-2">
+    <div className="flex flex-col space-y-2 pt-2">
+      <button
+        onClick={() => { navigate('/buyer/dashboard'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">📊</span>
+        Dashboard
+      </button>
+      <button
+        onClick={() => { navigate('/buyer/browse'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium bg-blue-50 text-blue-600 border-l-4 border-blue-600"
+      >
+        <span className="mr-2">🚗</span>
+        Browse Vehicles
+      </button>
+      <button
+        onClick={() => { navigate('/buyer/bookmarks'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">❤️</span>
+        Saved
+      </button>
+      {/* 🆕 NEW: Profile Link */}
+      <button
+        onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">👤</span>
+        My Profile
+      </button>
+      <button
+        onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
+      >
+        <span className="mr-2">🚪</span>
+        Logout
+      </button>
+    </div>
+  </div>
+)}
         </div>
       </nav>
 
@@ -241,6 +249,21 @@ function BuyerDashboard() {
             <h3 className="text-lg font-semibold text-purple-800 mb-2">Your Status</h3>
             <p className="text-lg font-medium text-purple-600 capitalize">{verificationStatus}</p>
           </div>
+<button
+  onClick={() => navigate('/profile')}
+  className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition text-left"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="text-xl font-bold text-gray-800 mb-2">My Profile 👤</h3>
+      <p className="text-gray-600">Update your information and password</p>
+    </div>
+    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </div>
+</button>
+
         </div>
       </div>
     </div>

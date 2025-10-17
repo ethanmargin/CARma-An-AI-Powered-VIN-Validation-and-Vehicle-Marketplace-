@@ -177,6 +177,20 @@ function SellerDashboard() {
                   Awaiting admin VIN approval
                 </p>
               </div>
+              <button
+  onClick={() => navigate('/profile')}
+  className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition text-left"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="text-xl font-bold text-gray-800 mb-2">My Profile 👤</h3>
+      <p className="text-gray-600">Update your information and password</p>
+    </div>
+    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </div>
+</button>
             </div>
           </div>
         )}

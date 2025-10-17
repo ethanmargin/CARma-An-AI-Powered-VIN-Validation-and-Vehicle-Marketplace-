@@ -121,40 +121,48 @@ function BrowseVehicles() {
           </div>
 
           {/* Mobile Menu Dropdown */}
-          {mobileMenuOpen && (
-            <div className="md:hidden pb-4 border-t border-gray-200 mt-2">
-              <div className="flex flex-col space-y-2 pt-2">
-                <button
-                  onClick={() => { navigate('/buyer/dashboard'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <span className="mr-2">📊</span>
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => { navigate('/buyer/browse'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium bg-blue-50 text-blue-600 border-l-4 border-blue-600"
-                >
-                  <span className="mr-2">🚗</span>
-                  Browse Vehicles
-                </button>
-                <button
-                  onClick={() => { navigate('/buyer/bookmarks'); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <span className="mr-2">❤️</span>
-                  Saved
-                </button>
-                <button
-                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                  className="text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
-                >
-                  <span className="mr-2">🚪</span>
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
+{mobileMenuOpen && (
+  <div className="md:hidden pb-4 border-t border-gray-200 mt-2">
+    <div className="flex flex-col space-y-2 pt-2">
+      <button
+        onClick={() => { navigate('/buyer/dashboard'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">📊</span>
+        Dashboard
+      </button>
+      <button
+        onClick={() => { navigate('/buyer/browse'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium bg-blue-50 text-blue-600 border-l-4 border-blue-600"
+      >
+        <span className="mr-2">🚗</span>
+        Browse Vehicles
+      </button>
+      <button
+        onClick={() => { navigate('/buyer/bookmarks'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">❤️</span>
+        Saved
+      </button>
+      {/* 🆕 NEW: Profile Link */}
+      <button
+        onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <span className="mr-2">👤</span>
+        My Profile
+      </button>
+      <button
+        onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+        className="text-left px-4 py-3 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
+      >
+        <span className="mr-2">🚪</span>
+        Logout
+      </button>
+    </div>
+  </div>
+)}
         </div>
       </nav>
 

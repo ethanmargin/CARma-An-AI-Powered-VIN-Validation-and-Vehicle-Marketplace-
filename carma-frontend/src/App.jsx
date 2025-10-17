@@ -10,6 +10,7 @@ import SellerDashboard from './pages/SellerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import BrowseVehicles from './pages/BrowseVehicles';
 import BookmarksPage from './pages/BookmarksPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -71,6 +72,15 @@ function App() {
           
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Profile Route - Available to all authenticated users */}
+<Route
+  path="/profile"
+  element={
+    <ProtectedRoute allowedRoles={['admin', 'seller', 'buyer']}>
+      <ProfilePage />
+    </ProtectedRoute>
+  }
+/>
         </Routes>
       </Router>
     </AuthProvider>
