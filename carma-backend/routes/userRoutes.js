@@ -1,13 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { uploadID, getVerificationStatus, getProfile } = require('../controllers/userController');
+const userController = require('../controllers/userController'); // ← Make sure this line exists
 const { protect } = require('../middleware/auth');
 
-// All routes are protected (require authentication)
-router.post('/upload-id', protect, userController.uploadID);
-router.get('/verification-status', protect, getVerificationStatus);
+// Get user profile
 router.get('/profile', protect, userController.getProfile);
+
+// Update profile (name, mobile)
 router.put('/profile', protect, userController.updateProfile);
+
 // Change password
 router.put('/change-password', protect, userController.changePassword);
+
+// Upload ID
+router.post('/upload-id', protect, userController.uploadID);
+
+// Get verification status
+router.get('/verification-status', protect, userController.getVerificationStatus);
+
 module.exports = router;
