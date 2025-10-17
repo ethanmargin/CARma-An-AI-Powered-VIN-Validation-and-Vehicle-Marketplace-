@@ -109,6 +109,7 @@ exports.addVehicle = async (req, res) => {
 };
 
 // Get all vehicles (for buyers to browse)
+// Get all vehicles (for buyers to browse)
 exports.getAllVehicles = async (req, res) => {
   try {
     const result = await db.query(`
@@ -117,7 +118,6 @@ exports.getAllVehicles = async (req, res) => {
         u.name as seller_name,
         u.email as seller_email,
         vv.status as vin_status
-        u.mobile_number as seller_mobile,
       FROM vehicles v
       JOIN users u ON v.user_id = u.user_id
       LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
