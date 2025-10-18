@@ -109,14 +109,25 @@ exports.addVehicle = async (req, res) => {
 };
 
 // Get all vehicles (for buyers to browse)
-// Get all vehicles (for buyers to browse)
 exports.getAllVehicles = async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
-        v.*,
+        v.vehicle_id,
+        v.make,
+        v.model,
+        v.year,
+        v.price,
+        v.description,
+        v.vin_number,
+        v.image_path,
+        v.mileage,
+        v.location,
+        v.transmission,
+        v.created_at,
         u.name as seller_name,
         u.email as seller_email,
+        u.mobile_number as seller_mobile,
         vv.status as vin_status
       FROM vehicles v
       JOIN users u ON v.user_id = u.user_id
@@ -127,7 +138,11 @@ exports.getAllVehicles = async (req, res) => {
     res.json({ success: true, vehicles: result.rows });
   } catch (error) {
     console.error('Get vehicles error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
   }
 };
 
