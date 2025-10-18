@@ -24,4 +24,7 @@ router.put('/verify-user', verifyUser);
 // Legacy route (keeping for compatibility)
 router.put('/verifications/update', updateVerificationStatus);
 
+// Auto-verify VIN using OCR
+router.post('/vehicles/:vehicleId/auto-verify-vin', protect, adminOnly, adminController.autoVerifyVIN);
+
 module.exports = router;

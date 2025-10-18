@@ -244,4 +244,101 @@ exports.getDashboardStats = async (req, res) => {
       error: error.message 
     });
   }
+
+  const vinOCR = require('../services/vinOCR');
+
+// Auto-verify VIN using OCR (Tesseract)
+exports.autoVerifyVIN = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+
+    console.log('🤖 Starting auto-verification for vehicle:', vehicleId);
+
+    // Get vehicle info
+    const vehicleResult = await db.query(
+      'SELECT v.*, vv.submitted_vin_image FROM vehicles v LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id WHERE v.vehicle_id = $1',
+      [vehicleId]
+    );
+
+    if (vehicleResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+
+    const vehicle = vehicleResult.rows[0];
+
+    if (!vehicle.submitted_vin_image) {
+      return res.status(400).json({
+        success: false,
+        message: 'No VIN image uploaded for this vehicle'
+      });
+    }
+
+    // Run OCR verification
+    console.log('🔍 Running Tesseract OCR verification...');
+    const ocrResult = await vinOCR.verifyVINFromImage(
+      vehicle.submitted_vin_image,
+      vehicle.vin_number
+    );
+
+    console.log('📊 OCR Result:', ocrResult);
+
+    // Update verification based on OCR result
+    let newStatus = 'pending';
+    let verificationNotes = '';
+
+    if (ocrResult.recommendation === 'auto_approve') {
+      newStatus = 'approved';
+      verificationNotes = `✅ Auto-approved by OCR. VIN matched: ${ocrResult.extractedVIN}. Confidence: ${ocrResult.confidence}`;
+    } else if (ocrResult.recommendation === 'reject') {
+      newStatus = 'rejected';
+      verificationNotes = `❌ Auto-rejected. ${ocrResult.reason}`;
+    } else {
+      newStatus = 'pending';
+      verificationNotes = `⚠️ Flagged for manual review. ${ocrResult.reason || ocrResult.message}`;
+    }
+
+    // Update database
+    await db.query(
+      `UPDATE vin_verification 
+       SET status = $1, 
+           ocr_extracted_vin = $2,
+           ocr_confidence = $3,
+           verification_notes = $4,
+           date_verified = CURRENT_TIMESTAMP
+       WHERE vehicle_id = $5`,
+      [
+        newStatus,
+        ocrResult.extractedVIN || null,
+        ocrResult.confidence || 'low',
+        verificationNotes,
+        vehicleId
+      ]
+    );
+
+    // Log action
+    await db.query(
+      'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [req.user.user_id, 'VIN_OCR_VERIFICATION', `OCR verified vehicle ${vehicleId}: ${newStatus}`]
+    );
+
+    res.json({
+      success: true,
+      message: 'OCR verification completed',
+      ocrResult: ocrResult,
+      newStatus: newStatus,
+      notes: verificationNotes
+    });
+
+  } catch (error) {
+    console.error('❌ Auto verify VIN error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify VIN',
+      error: error.message
+    });
+  }
+};
 };
