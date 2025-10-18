@@ -1,30 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const {
-  getPendingVerifications,
-  getAllVerifications,
-  verifyUser,
-  updateVerificationStatus,
-  getDashboardStats
-} = require('../controllers/adminController');
+const adminController = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
 // Protect all admin routes
 router.use(protect);
 router.use(authorize('admin'));
 
-// Routes
-router.get('/verifications/pending', getPendingVerifications);
-router.get('/verifications/all', getAllVerifications);
-router.get('/stats', getDashboardStats);
+// Dashboard Stats
+router.get('/stats', adminController.getDashboardStats);
 
-// This is the important one for approval/rejection
-router.put('/verify-user', verifyUser);
+// User Verification Routes
+router.get('/verifications/pending', adminController.getPendingVerifications);
+router.get('/verifications/all', adminController.getAllVerifications);
+router.put('/verify-user', adminController.verifyUser);
+router.put('/verifications/update', adminController.updateVerificationStatus);
 
-// Legacy route (keeping for compatibility)
-router.put('/verifications/update', updateVerificationStatus);
+// VIN Verification Routes
+router.get('/pending-vins', adminController.getPendingVINs);
+router.post('/verify-vin/:vehicleId', adminController.verifyVIN);
 
-// Auto-verify VIN using OCR
-router.post('/vehicles/:vehicleId/auto-verify-vin', protect, adminOnly, adminController.autoVerifyVIN);
+// Auto-verify VIN using OCR (Tesseract)
+router.post('/vehicles/:vehicleId/auto-verify-vin', adminController.autoVerifyVIN);
+
+// System Logs
+router.get('/logs', adminController.getSystemLogs);
 
 module.exports = router;
