@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const vinOCR = require('../services/vinOCR');
 
 // Get all pending verifications
 exports.getPendingVerifications = async (req, res) => {
@@ -244,8 +245,84 @@ exports.getDashboardStats = async (req, res) => {
       error: error.message 
     });
   }
+};
 
-  const vinOCR = require('../services/vinOCR');
+// Get pending VIN verifications
+exports.getPendingVINs = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        v.*,
+        vv.status as vin_status,
+        vv.submitted_vin_image,
+        vv.ocr_extracted_vin,
+        vv.ocr_confidence,
+        vv.verification_notes,
+        u.name as seller_name,
+        u.email as seller_email
+      FROM vehicles v
+      LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
+      JOIN users u ON v.user_id = u.user_id
+      WHERE vv.status = 'pending'
+      ORDER BY v.created_at DESC
+    `);
+
+    res.json({
+      success: true,
+      vins: result.rows
+    });
+
+  } catch (error) {
+    console.error('Get pending VINs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending VINs'
+    });
+  }
+};
+
+// Manually verify/reject VIN
+exports.verifyVIN = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const { status, notes } = req.body; // status: 'approved' or 'rejected'
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be either approved or rejected'
+      });
+    }
+
+    // Update VIN verification
+    await db.query(
+      `UPDATE vin_verification 
+       SET status = $1, 
+           verification_notes = $2,
+           date_verified = CURRENT_TIMESTAMP
+       WHERE vehicle_id = $3`,
+      [status, notes || `Manually ${status} by admin`, vehicleId]
+    );
+
+    // Log action
+    await db.query(
+      'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [req.user.user_id, 'VIN_MANUAL_VERIFICATION', `Admin ${status} VIN for vehicle ${vehicleId}`]
+    );
+
+    res.json({
+      success: true,
+      message: `VIN ${status} successfully`
+    });
+
+  } catch (error) {
+    console.error('Verify VIN error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify VIN'
+    });
+  }
+};
 
 // Auto-verify VIN using OCR (Tesseract)
 exports.autoVerifyVIN = async (req, res) => {
@@ -341,4 +418,31 @@ exports.autoVerifyVIN = async (req, res) => {
     });
   }
 };
+
+// Get system logs
+exports.getSystemLogs = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        sl.*,
+        u.name as user_name,
+        u.email as user_email
+      FROM system_logs sl
+      LEFT JOIN users u ON sl.user_id = u.user_id
+      ORDER BY sl.timestamp DESC
+      LIMIT 100
+    `);
+
+    res.json({
+      success: true,
+      logs: result.rows
+    });
+
+  } catch (error) {
+    console.error('Get system logs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch system logs'
+    });
+  }
 };
