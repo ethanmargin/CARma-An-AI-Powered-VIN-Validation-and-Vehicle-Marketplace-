@@ -11,7 +11,7 @@ cloudinary.config({
 });
 
 // Configure Cloudinary storage for vehicle images
-const storage = new CloudinaryStorage({
+const vehicleStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'carma/vehicles',
@@ -20,13 +20,26 @@ const storage = new CloudinaryStorage({
   }
 });
 
+// Configure Cloudinary storage for VIN images
+const vinStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'carma/vin-plates',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto:best' }]
+  }
+});
+
+// 🆕 NEW: Handle multiple file uploads (vehicle image + VIN image)
 const upload = multer({
-  storage: storage,
+  storage: vehicleStorage,
   limits: { fileSize: 5 * 1024 * 1024 }
-}).single('vehicleImage');
+}).fields([
+  { name: 'vehicleImage', maxCount: 1 },
+  { name: 'vinImage', maxCount: 1 }
+]);
 
-
-//add Vehicle
+// Add Vehicle with VIN Image
 exports.addVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -37,15 +50,26 @@ exports.addVehicle = async (req, res) => {
     try {
       const { make, model, year, price, description, vin_number, mileage, location, transmission } = req.body;
       const userId = req.user.user_id;
-      const imagePath = req.file ? req.file.path : null;
+      
+      // Get uploaded file paths
+      const vehicleImagePath = req.files?.vehicleImage ? req.files.vehicleImage[0].path : null;
+      const vinImagePath = req.files?.vinImage ? req.files.vinImage[0].path : null;
 
-      console.log('✅ Vehicle Image Uploaded to Cloudinary:', imagePath);
+      console.log('✅ Vehicle Image Uploaded:', vehicleImagePath);
+      console.log('✅ VIN Image Uploaded:', vinImagePath);
 
       // Validation
       if (!make || !model || !vin_number || !year || !price) {
         return res.status(400).json({ 
           success: false, 
           message: 'Please provide all required fields' 
+        });
+      }
+
+      if (!vinImagePath) {
+        return res.status(400).json({
+          success: false,
+          message: 'VIN plate image is required for verification'
         });
       }
 
@@ -75,29 +99,29 @@ exports.addVehicle = async (req, res) => {
         });
       }
 
-      // Insert vehicle with transmission field
+      // Insert vehicle
       const result = await db.query(
         `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, created_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) 
          RETURNING *`,
-        [userId, make, model, year, price, description, vin_number, imagePath, mileage, location, transmission]
+        [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission]
       );
 
-      // Create VIN verification record
+      // 🆕 Create VIN verification record with VIN image
       await db.query(
-        'INSERT INTO vin_verification (vehicle_id, status) VALUES ($1, $2)',
-        [result.rows[0].vehicle_id, 'pending']
+        'INSERT INTO vin_verification (vehicle_id, status, submitted_vin_image) VALUES ($1, $2, $3)',
+        [result.rows[0].vehicle_id, 'pending', vinImagePath]
       );
 
       // Log action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model}`]
+        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image for OCR verification`]
       );
 
       res.status(201).json({
         success: true,
-        message: 'Vehicle added successfully! Awaiting VIN verification.',
+        message: 'Vehicle added successfully! VIN will be verified automatically using OCR.',
         vehicle: result.rows[0]
       });
 
@@ -205,8 +229,13 @@ exports.getVehicleById = async (req, res) => {
 };
 
 // Update vehicle
+const singleUpload = multer({
+  storage: vehicleStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+}).single('vehicleImage');
+
 exports.updateVehicle = async (req, res) => {
-  upload(req, res, async function (err) {
+  singleUpload(req, res, async function (err) {
     if (err) {
       console.error('Vehicle upload error:', err);
       return res.status(400).json({ success: false, message: err.message });
@@ -237,7 +266,7 @@ exports.updateVehicle = async (req, res) => {
         console.log('✅ New vehicle image uploaded:', imagePath);
       }
 
-      // Update vehicle with transmission
+      // Update vehicle
       const updateResult = await db.query(
         `UPDATE vehicles 
          SET make = $1, model = $2, year = $3, price = $4, 

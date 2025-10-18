@@ -17,8 +17,10 @@ function AddVehicleForm({ onSuccess }) {
     transmission: ''
   });
   
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [vehicleImage, setVehicleImage] = useState(null);
+  const [vinImage, setVinImage] = useState(null); // 🆕 NEW
+  const [vehiclePreview, setVehiclePreview] = useState(null);
+  const [vinPreview, setVinPreview] = useState(null); // 🆕 NEW
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -27,13 +29,26 @@ function AddVehicleForm({ onSuccess }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e) => {
+  const handleVehicleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImage(file);
+      setVehicleImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreview(reader.result);
+        setVehiclePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 🆕 NEW: Handle VIN image upload
+  const handleVinImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setVinImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVinPreview(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -54,10 +69,15 @@ function AddVehicleForm({ onSuccess }) {
     data.append('vin_number', formData.vin_number);
     data.append('mileage', formData.mileage);
     data.append('location', formData.location);
-    data.append('transmission:', formData.transmission);
+    data.append('transmission', formData.transmission); // Fixed typo (removed colon)
     
-    if (image) {
-      data.append('vehicleImage', image);
+    if (vehicleImage) {
+      data.append('vehicleImage', vehicleImage);
+    }
+
+    // 🆕 NEW: Append VIN image
+    if (vinImage) {
+      data.append('vinImage', vinImage);
     }
 
     try {
@@ -65,7 +85,9 @@ function AddVehicleForm({ onSuccess }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      setSuccess('Vehicle added successfully! Awaiting VIN verification.');
+      setSuccess('Vehicle added successfully! VIN will be verified automatically using OCR.');
+      
+      // Reset form
       setFormData({ 
         make: '', 
         model: '', 
@@ -77,8 +99,10 @@ function AddVehicleForm({ onSuccess }) {
         location: '',
         transmission: ''
       });
-      setImage(null);
-      setPreview(null);
+      setVehicleImage(null);
+      setVinImage(null);
+      setVehiclePreview(null);
+      setVinPreview(null);
       
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -188,18 +212,18 @@ function AddVehicleForm({ onSuccess }) {
           </div>
 
           <div>
-  <label className="block text-gray-700 font-medium mb-2">Transmission</label>
-  <select
-    name="transmission"
-    value={formData.transmission}
-    onChange={handleChange}
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-  >
-    <option value="">Select Transmission</option>
-    <option value="Automatic">Automatic</option>
-    <option value="Manual">Manual</option>
-  </select>
-</div>
+            <label className="block text-gray-700 font-medium mb-2">Transmission</label>
+            <select
+              name="transmission"
+              value={formData.transmission}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+            >
+              <option value="">Select Transmission</option>
+              <option value="Automatic">Automatic</option>
+              <option value="Manual">Manual</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -212,7 +236,7 @@ function AddVehicleForm({ onSuccess }) {
             required
             maxLength="17"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-            placeholder="17-character VIN"
+            placeholder="17-character VIN (e.g., 1HGBH41JXMN109186)"
           />
           <p className="text-sm text-gray-500 mt-1">Must be exactly 17 characters</p>
         </div>
@@ -234,12 +258,36 @@ function AddVehicleForm({ onSuccess }) {
           <input
             type="file"
             accept="image/*"
-            onChange={handleImageChange}
+            onChange={handleVehicleImageChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
           />
-          {preview && (
+          {vehiclePreview && (
             <div className="mt-4">
-              <img src={preview} alt="Preview" className="max-w-md h-auto rounded-lg border" />
+              <p className="text-sm text-gray-600 mb-2">Preview:</p>
+              <img src={vehiclePreview} alt="Vehicle Preview" className="max-w-md h-auto rounded-lg border" />
+            </div>
+          )}
+        </div>
+
+        {/* 🆕 NEW: VIN Image Upload */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <label className="block text-gray-700 font-medium mb-2">
+            VIN Plate Image * (For OCR Verification) 🤖
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleVinImageChange}
+            required
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+          />
+          <p className="text-sm text-blue-700 mt-2">
+            📸 <strong>Important:</strong> Upload a clear photo of your VIN plate. Our AI will automatically verify it matches the VIN number you entered above.
+          </p>
+          {vinPreview && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">VIN Image Preview:</p>
+              <img src={vinPreview} alt="VIN Preview" className="max-w-sm h-auto rounded-lg border border-blue-300" />
             </div>
           )}
         </div>
@@ -249,7 +297,7 @@ function AddVehicleForm({ onSuccess }) {
           disabled={loading}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50"
         >
-          {loading ? 'Adding Vehicle...' : 'Add Vehicle'}
+          {loading ? 'Adding Vehicle...' : '🚗 Add Vehicle'}
         </button>
       </form>
     </div>

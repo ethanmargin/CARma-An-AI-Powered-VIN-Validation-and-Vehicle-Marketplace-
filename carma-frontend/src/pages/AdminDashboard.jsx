@@ -91,13 +91,21 @@ function AdminDashboard() {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-purple-600">CARma</h1>
               <span className="ml-4 text-gray-600">Admin Dashboard</span>
             </div>
+            {/* Updated Header Buttons */}
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/profile')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center space-x-2"
+              >
+                <span>👤</span>
+                <span>Profile</span>
+              </button>
               
               <button
                 onClick={handleLogout}
@@ -308,44 +316,75 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - UPDATED */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
             <div className="space-y-3">
-              <button className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-medium transition text-left">
-                📊 Generate Reports
+              {/* VIN Verification Button */}
+              <button 
+                onClick={() => navigate('/admin/vin-verifications')}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-medium transition text-left flex items-center"
+              >
+                <span className="mr-3">🤖</span>
+                <div className="text-left">
+                  <div className="font-semibold">VIN Verifications (OCR)</div>
+                  <div className="text-xs opacity-90">Review and auto-verify VINs</div>
+                </div>
               </button>
-              <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium transition text-left">
-                🚗 Review Vehicle VINs
+
+              {/* Profile Button */}
+              <button 
+                onClick={() => navigate('/profile')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition text-left flex items-center"
+              >
+                <span className="mr-3">👤</span>
+                <div className="text-left">
+                  <div className="font-semibold">My Profile</div>
+                  <div className="text-xs opacity-90">Update settings & password</div>
+                </div>
               </button>
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition text-left">
-                📋 View System Logs
+
+              {/* System Logs (Coming Soon) */}
+              <button 
+                disabled
+                className="w-full bg-gray-400 text-white px-4 py-3 rounded-lg font-medium transition text-left flex items-center cursor-not-allowed opacity-50"
+              >
+                <span className="mr-3">📋</span>
+                <div className="text-left">
+                  <div className="font-semibold">System Logs</div>
+                  <div className="text-xs opacity-90">Coming soon...</div>
+                </div>
               </button>
             </div>
-            <p className="text-gray-500 text-sm mt-4">More features coming soon...</p>
           </div>
 
+          {/* Updated Admin Tips - Now OCR Features */}
           <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg shadow-md p-6 text-white">
-            <h3 className="text-lg font-bold mb-4">Admin Tips</h3>
+            <h3 className="text-lg font-bold mb-4">🤖 OCR Features</h3>
             <ul className="space-y-2">
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
-                <span>Review pending verifications regularly</span>
+                <span>Automatic VIN reading from images</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
-                <span>Check ID documents carefully before approving</span>
+                <span>AI-powered text recognition</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
-                <span>Monitor flagged VIN numbers</span>
+                <span>90%+ similarity matching</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
-                <span>Generate weekly reports for tracking</span>
+                <span>Manual override available</span>
               </li>
             </ul>
+            <div className="mt-4 pt-4 border-t border-white/30">
+              <p className="text-sm opacity-90">
+                💡 Use OCR to verify VINs faster and more accurately!
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -415,7 +454,6 @@ function AdminDashboard() {
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {(() => {
                         try {
-                          // Try to parse if it's a string, otherwise use directly
                           const data = typeof selectedUser.id_data === 'string' 
                             ? JSON.parse(selectedUser.id_data) 
                             : selectedUser.id_data;
@@ -455,7 +493,6 @@ function AdminDashboard() {
                   </div>
                 )}
 
-                {/* Warning if no ID data */}
                 {!selectedUser.id_data && (
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                     <p className="text-sm text-yellow-800">
@@ -507,23 +544,6 @@ function AdminDashboard() {
                 {actionLoading ? 'Processing...' : '✗ Reject Verification'}
               </button>
             </div>
-
-            <button
-  onClick={() => navigate('/profile')}
-  className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition text-left"
->
-  <div className="flex items-center justify-between">
-    <div>
-      <h3 className="text-xl font-bold text-gray-800 mb-2">My Profile 👤</h3>
-      <p className="text-gray-600">Update your information and password</p>
-    </div>
-    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  </div>
-</button>
-
-
           </div>
         </div>
       )}
