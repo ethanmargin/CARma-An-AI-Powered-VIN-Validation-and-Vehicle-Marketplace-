@@ -11,7 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import BrowseVehicles from './pages/BrowseVehicles';
 import BookmarksPage from './pages/BookmarksPage';
 import ProfilePage from './pages/ProfilePage';
-
+import VINVerificationList from './components/admin/VINVerificationList';
 function App() {
   return (
     <AuthProvider>
@@ -66,6 +66,16 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          {/* 🆕 NEW: VIN Verifications Route */}
+<Route
+  path="/admin/vin-verifications"
+  element={
+    <ProtectedRoute allowedRoles={['admin']}>
+      <VINVerificationList />
+    </ProtectedRoute>
+  }
+/>
 
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/login" replace />} />
