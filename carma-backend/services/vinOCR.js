@@ -180,54 +180,60 @@ async function verifyVINFromImage(imageUrl, expectedVIN) {
       };
     }
 
-    // Step 4: Compare with expected VIN
-    const cleanExpectedVIN = expectedVIN.replace(/\s+/g, '').toUpperCase();
-    const vinMatch = extractedVIN === cleanExpectedVIN;
-    const similarity = calculateVINSimilarity(extractedVIN, cleanExpectedVIN);
+   // Step 4: Compare with expected VIN and apply new thresholds
+const cleanExpectedVIN = expectedVIN.replace(/\s+/g, '').toUpperCase();
+const vinMatch = extractedVIN === cleanExpectedVIN;
+const similarity = calculateVINSimilarity(extractedVIN, cleanExpectedVIN);
 
-    console.log('🔍 VIN Comparison:');
-    console.log('   Expected:', cleanExpectedVIN);
-    console.log('   Extracted:', extractedVIN);
-    console.log('   Similarity:', similarity.toFixed(2) + '%');
+console.log('🔍 VIN Comparison:');
+console.log('   Expected:', cleanExpectedVIN);
+console.log('   Extracted:', extractedVIN);
+console.log('   Similarity:', similarity.toFixed(2) + '%');
 
-    if (vinMatch) {
-      return {
-        success: true,
-        verified: true,
-        extractedVIN: extractedVIN,
-        expectedVIN: cleanExpectedVIN,
-        similarity: similarity,
-        ocrConfidence: ocrResult.confidence,
-        message: 'VIN verified successfully! ✅',
-        recommendation: 'auto_approve',
-        confidence: ocrResult.confidence > 80 ? 'high' : 'medium'
-      };
-    } else if (similarity >= 90) {
-      // If 90%+ similar, flag for manual review (might be OCR error)
-      return {
-        success: true,
-        verified: false,
-        extractedVIN: extractedVIN,
-        expectedVIN: cleanExpectedVIN,
-        similarity: similarity,
-        ocrConfidence: ocrResult.confidence,
-        message: 'VIN very similar but not exact match',
-        recommendation: 'manual_review',
-        reason: `${similarity.toFixed(0)}% match - possible OCR error. Expected: ${cleanExpectedVIN}, Found: ${extractedVIN}`
-      };
-    } else {
-      return {
-        success: true,
-        verified: false,
-        extractedVIN: extractedVIN,
-        expectedVIN: cleanExpectedVIN,
-        similarity: similarity,
-        ocrConfidence: ocrResult.confidence,
-        message: 'VIN does not match vehicle listing',
-        recommendation: 'reject',
-        reason: `Only ${similarity.toFixed(0)}% match. Expected: ${cleanExpectedVIN}, Found: ${extractedVIN}`
-      };
-    }
+// 🆕 NEW THRESHOLDS: 70%+ approve, <70% reject
+if (vinMatch) {
+  // Perfect match - auto approve
+  return {
+    success: true,
+    verified: true,
+    extractedVIN: extractedVIN,
+    expectedVIN: cleanExpectedVIN,
+    similarity: similarity,
+    ocrConfidence: ocrResult.confidence,
+    message: '✅ VIN verified successfully! Perfect match.',
+    recommendation: 'auto_approve',
+    confidence: 'high'
+  };
+} else if (similarity >= 70) {
+  // 70%+ similarity - auto approve (likely OCR minor errors)
+  const differentChars = 17 - Math.round((similarity / 100) * 17);
+  return {
+    success: true,
+    verified: true,
+    extractedVIN: extractedVIN,
+    expectedVIN: cleanExpectedVIN,
+    similarity: similarity,
+    ocrConfidence: ocrResult.confidence,
+    message: `✅ VIN approved with ${similarity.toFixed(0)}% match (${differentChars} character${differentChars > 1 ? 's' : ''} different - likely OCR error)`,
+    recommendation: 'auto_approve',
+    confidence: similarity >= 90 ? 'high' : 'medium',
+    reason: `Auto-approved: ${similarity.toFixed(1)}% similarity. Expected: ${cleanExpectedVIN}, Found: ${extractedVIN}`
+  };
+} else {
+  // Less than 70% - reject
+  const differentChars = 17 - Math.round((similarity / 100) * 17);
+  return {
+    success: true,
+    verified: false,
+    extractedVIN: extractedVIN,
+    expectedVIN: cleanExpectedVIN,
+    similarity: similarity,
+    ocrConfidence: ocrResult.confidence,
+    message: `❌ VIN rejected - only ${similarity.toFixed(0)}% match (${differentChars} characters different)`,
+    recommendation: 'reject',
+    reason: `Too many differences. Expected: ${cleanExpectedVIN}, Found: ${extractedVIN}. Please verify VIN number or upload clearer image.`
+  };
+}
 
   } catch (error) {
     console.error('❌ VIN Verification Error:', error);
