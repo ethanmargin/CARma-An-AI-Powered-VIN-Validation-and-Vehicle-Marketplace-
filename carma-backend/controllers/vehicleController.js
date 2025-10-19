@@ -2,6 +2,7 @@ const db = require('../config/db');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const vinOCR = require('../services/vinOCR'); // 🆕 NEW: Import OCR service
 
 // Configure Cloudinary
 cloudinary.config({
@@ -30,7 +31,7 @@ const vinStorage = new CloudinaryStorage({
   }
 });
 
-// 🆕 NEW: Handle multiple file uploads (vehicle image + VIN image)
+// Handle multiple file uploads (vehicle image + VIN image)
 const upload = multer({
   storage: vehicleStorage,
   limits: { fileSize: 5 * 1024 * 1024 }
@@ -39,7 +40,71 @@ const upload = multer({
   { name: 'vinImage', maxCount: 1 }
 ]);
 
-// Add Vehicle with VIN Image
+// 🆕 NEW: Helper function to run OCR verification in background
+async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) {
+  try {
+    console.log(`🔍 Running automatic OCR for vehicle ${vehicleId}...`);
+    
+    // Run OCR
+    const ocrResult = await vinOCR.verifyVINFromImage(vinImagePath, expectedVIN);
+    
+    console.log('📊 OCR Result:', ocrResult);
+
+    // Determine status based on OCR result
+    let newStatus = 'pending';
+    let verificationNotes = '';
+
+    if (ocrResult.recommendation === 'auto_approve') {
+      newStatus = 'approved';
+      verificationNotes = `✅ ${ocrResult.message} (Auto-verified by AI on upload)`;
+    } else if (ocrResult.recommendation === 'reject') {
+      newStatus = 'rejected';
+      verificationNotes = `❌ ${ocrResult.reason}`;
+    } else {
+      newStatus = 'pending';
+      verificationNotes = `⚠️ ${ocrResult.reason || ocrResult.message}`;
+    }
+
+    // Update database
+    await db.query(
+      `UPDATE vin_verification 
+       SET status = $1, 
+           ocr_extracted_vin = $2,
+           ocr_confidence = $3,
+           verification_notes = $4,
+           date_verified = CURRENT_TIMESTAMP
+       WHERE vehicle_id = $5`,
+      [
+        newStatus,
+        ocrResult.extractedVIN || null,
+        ocrResult.confidence || 'low',
+        verificationNotes,
+        vehicleId
+      ]
+    );
+
+    // Log OCR action
+    await db.query(
+      'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [userId, 'VIN_AUTO_OCR', `Auto-OCR for vehicle ${vehicleId}: ${newStatus}`]
+    );
+
+    console.log(`✅ Automatic OCR completed for vehicle ${vehicleId}: ${newStatus}`);
+
+  } catch (error) {
+    console.error(`❌ OCR verification failed for vehicle ${vehicleId}:`, error);
+    
+    // Update verification with error status
+    await db.query(
+      `UPDATE vin_verification 
+       SET verification_notes = $1
+       WHERE vehicle_id = $2`,
+      [`⚠️ Automatic OCR failed: ${error.message}. Admin will review manually.`, vehicleId]
+    );
+  }
+}
+
+// Add Vehicle with VIN Image and AUTO-OCR
 exports.addVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -107,21 +172,32 @@ exports.addVehicle = async (req, res) => {
         [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission]
       );
 
-      // 🆕 Create VIN verification record with VIN image
+      const vehicleId = result.rows[0].vehicle_id;
+
+      // Create VIN verification record
       await db.query(
         'INSERT INTO vin_verification (vehicle_id, status, submitted_vin_image) VALUES ($1, $2, $3)',
-        [result.rows[0].vehicle_id, 'pending', vinImagePath]
+        [vehicleId, 'pending', vinImagePath]
       );
+
+      // 🆕 NEW: Automatically run OCR verification in background
+      console.log('🤖 Auto-triggering OCR verification...');
+      
+      // Run OCR without waiting (async background process)
+      runOCRVerification(vehicleId, vinImagePath, vin_number, userId).catch(error => {
+        console.error('❌ Background OCR error:', error);
+        // Don't fail the vehicle creation if OCR fails
+      });
 
       // Log action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image for OCR verification`]
+        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image - OCR auto-triggered`]
       );
 
       res.status(201).json({
         success: true,
-        message: 'Vehicle added successfully! VIN will be verified automatically using OCR.',
+        message: '🚗 Vehicle added successfully! 🤖 AI is automatically verifying your VIN...',
         vehicle: result.rows[0]
       });
 
@@ -179,7 +255,8 @@ exports.getMyVehicles = async (req, res) => {
       SELECT 
         v.*,
         vv.status as vin_status,
-        vv.date_verified
+        vv.date_verified,
+        vv.verification_notes
       FROM vehicles v
       LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
       WHERE v.user_id = $1
@@ -228,12 +305,7 @@ exports.getVehicleById = async (req, res) => {
   }
 };
 
-// Update vehicle
-const singleUpload = multer({
-  storage: vehicleStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }
-}).single('vehicleImage');
-
+// Update vehicle with AUTO-OCR on VIN re-upload
 exports.updateVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -259,14 +331,16 @@ exports.updateVehicle = async (req, res) => {
         });
       }
 
+      const vehicle = ownerCheck.rows[0];
+
       // Handle new vehicle image if uploaded
-      let vehicleImagePath = ownerCheck.rows[0].image_path;
+      let vehicleImagePath = vehicle.image_path;
       if (req.files?.vehicleImage) {
         vehicleImagePath = req.files.vehicleImage[0].path;
         console.log('✅ New vehicle image uploaded:', vehicleImagePath);
       }
 
-      // 🆕 NEW: Handle new VIN image if uploaded
+      // 🆕 UPDATED: Handle new VIN image and auto-trigger OCR
       if (req.files?.vinImage) {
         const vinImagePath = req.files.vinImage[0].path;
         console.log('✅ New VIN image uploaded:', vinImagePath);
@@ -278,13 +352,19 @@ exports.updateVehicle = async (req, res) => {
                status = 'pending',
                ocr_extracted_vin = NULL,
                ocr_confidence = NULL,
-               verification_notes = 'Seller re-uploaded VIN image. Awaiting re-verification.',
+               verification_notes = 'Seller re-uploaded VIN image. Auto-verifying...',
                date_verified = NULL
            WHERE vehicle_id = $2`,
           [vinImagePath, vehicleId]
         );
         
         console.log('✅ VIN image updated, verification reset to pending');
+        
+        // 🆕 NEW: Auto-trigger OCR on re-upload
+        console.log('🤖 Auto-triggering OCR verification on re-upload...');
+        runOCRVerification(vehicleId, vinImagePath, vehicle.vin_number, userId).catch(error => {
+          console.error('❌ Background OCR error:', error);
+        });
       }
 
       // Update vehicle
@@ -300,7 +380,7 @@ exports.updateVehicle = async (req, res) => {
       res.json({
         success: true,
         message: req.files?.vinImage 
-          ? 'Vehicle updated successfully! New VIN image will be re-verified.' 
+          ? '🚗 Vehicle updated! 🤖 AI is automatically re-verifying your VIN...' 
           : 'Vehicle updated successfully',
         vehicle: updateResult.rows[0]
       });

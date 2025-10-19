@@ -85,7 +85,7 @@ function AddVehicleForm({ onSuccess }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      setSuccess('Vehicle added successfully! VIN will be verified automatically using OCR.');
+      setSuccess('Vehicle added successfully! AI is automatically verifying your VIN...');
       
       // Reset form
       setFormData({ 

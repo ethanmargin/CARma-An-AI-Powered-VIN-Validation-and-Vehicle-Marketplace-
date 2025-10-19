@@ -54,44 +54,50 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const data = new FormData();
-      data.append('make', formData.make);
-      data.append('model', formData.model);
-      data.append('year', formData.year);
-      data.append('price', formData.price);
-      data.append('description', formData.description);
-      data.append('mileage', formData.mileage);
-      data.append('location', formData.location);
-      data.append('transmission', formData.transmission);
-      
-      if (vehicleImage) {
-        data.append('vehicleImage', vehicleImage);
-      }
-
-      // 🆕 NEW: Add VIN image if uploaded
-      if (vinImage) {
-        data.append('vinImage', vinImage);
-      }
-
-      await API.put(`/vehicles/${vehicle.vehicle_id}`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      if (onSuccess) onSuccess();
-      onClose();
-
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update vehicle');
-    } finally {
-      setLoading(false);
+  try {
+    const data = new FormData();
+    data.append('make', formData.make);
+    data.append('model', formData.model);
+    data.append('year', formData.year);
+    data.append('price', formData.price);
+    data.append('description', formData.description);
+    data.append('mileage', formData.mileage);
+    data.append('location', formData.location);
+    data.append('transmission', formData.transmission);
+    
+    if (vehicleImage) {
+      data.append('vehicleImage', vehicleImage);
     }
-  };
+
+    if (vinImage) {
+      data.append('vinImage', vinImage);
+    }
+
+    const response = await API.put(`/vehicles/${vehicle.vehicle_id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    // 🆕 NEW: Show appropriate success message
+    if (vinImage) {
+      alert('✅ Vehicle updated successfully!\n\n🤖 AI is automatically re-verifying your VIN. Check "My Vehicles" in a few seconds to see the result!');
+    } else {
+      alert('✅ Vehicle updated successfully!');
+    }
+
+    if (onSuccess) onSuccess();
+    onClose();
+
+  } catch (error) {
+    setError(error.response?.data?.message || 'Failed to update vehicle');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
