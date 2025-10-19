@@ -10,9 +10,11 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     description: '',
     mileage: '',
     location: '',
-    transmission: '' // 🆕 NEW
+    transmission: ''
   });
   const [vehicleImage, setVehicleImage] = useState(null);
+  const [vinImage, setVinImage] = useState(null); // 🆕 NEW
+  const [vinPreview, setVinPreview] = useState(null); // 🆕 NEW
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,7 +28,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
         description: vehicle.description || '',
         mileage: vehicle.mileage || '',
         location: vehicle.location || '',
-        transmission: vehicle.transmission || '' // 🆕 NEW
+        transmission: vehicle.transmission || ''
       });
     }
   }, [vehicle]);
@@ -37,6 +39,19 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
 
   const handleImageChange = (e) => {
     setVehicleImage(e.target.files[0]);
+  };
+
+  // 🆕 NEW: Handle VIN image change
+  const handleVinImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setVinImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVinPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -53,10 +68,15 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
       data.append('description', formData.description);
       data.append('mileage', formData.mileage);
       data.append('location', formData.location);
-      data.append('transmission', formData.transmission); // 🆕 NEW
+      data.append('transmission', formData.transmission);
       
       if (vehicleImage) {
         data.append('vehicleImage', vehicleImage);
+      }
+
+      // 🆕 NEW: Add VIN image if uploaded
+      if (vinImage) {
+        data.append('vinImage', vinImage);
       }
 
       await API.put(`/vehicles/${vehicle.vehicle_id}`, data, {
@@ -165,7 +185,6 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
                 />
               </div>
 
-              {/* 🆕 NEW: Transmission Field */}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Transmission</label>
                 <select
@@ -206,6 +225,38 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
                 <p className="text-sm text-gray-500 mt-1">
                   Current image will be kept if no new image is uploaded
                 </p>
+              )}
+            </div>
+
+            {/* 🆕 NEW: VIN Image Re-upload */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Update VIN Plate Image (Re-upload for better OCR) 📸
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleVinImageChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              />
+              
+              {/* Tips for better VIN photos */}
+              <div className="mt-3 bg-white border border-blue-300 rounded p-3">
+                <p className="text-sm font-semibold text-blue-900 mb-2">📷 Tips for Clear VIN Photos:</p>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>✓ Take photo in good lighting (daylight is best)</li>
+                  <li>✓ Hold camera straight, not at an angle</li>
+                  <li>✓ Get close enough so VIN fills most of the frame</li>
+                  <li>✓ Make sure all 17 characters are clearly visible</li>
+                  <li>✓ Avoid shadows, glare, or reflections</li>
+                </ul>
+              </div>
+
+              {vinPreview && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">New VIN Image Preview:</p>
+                  <img src={vinPreview} alt="New VIN Preview" className="max-w-sm h-auto rounded-lg border border-blue-300" />
+                </div>
               )}
             </div>
 

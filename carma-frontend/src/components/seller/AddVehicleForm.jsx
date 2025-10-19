@@ -270,27 +270,39 @@ function AddVehicleForm({ onSuccess }) {
         </div>
 
         {/* 🆕 NEW: VIN Image Upload */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <label className="block text-gray-700 font-medium mb-2">
-            VIN Plate Image * (For OCR Verification) 🤖
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleVinImageChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-          />
-          <p className="text-sm text-blue-700 mt-2">
-            📸 <strong>Important:</strong> Upload a clear photo of your VIN plate. Our AI will automatically verify it matches the VIN number you entered above.
-          </p>
-          {vinPreview && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-2">VIN Image Preview:</p>
-              <img src={vinPreview} alt="VIN Preview" className="max-w-sm h-auto rounded-lg border border-blue-300" />
-            </div>
-          )}
-        </div>
+       {/* VIN Image Upload */}
+<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+  <label className="block text-gray-700 font-medium mb-2">
+    VIN Plate Image * (For OCR Verification) 🤖
+  </label>
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleVinImageChange}
+    required
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+  />
+  
+  {/* Tips for better VIN photos */}
+  <div className="mt-3 bg-white border border-blue-300 rounded p-3">
+    <p className="text-sm font-semibold text-blue-900 mb-2">📷 Tips for Clear VIN Photos:</p>
+    <ul className="text-xs text-blue-800 space-y-1">
+      <li>✓ Take photo in good lighting (daylight is best)</li>
+      <li>✓ Hold camera straight, not at an angle</li>
+      <li>✓ Get close enough so VIN fills most of the frame</li>
+      <li>✓ Make sure all 17 characters are clearly visible</li>
+      <li>✓ Avoid shadows, glare, or reflections</li>
+      <li>✓ Use your phone's camera, not a screenshot</li>
+    </ul>
+  </div>
+
+  {vinPreview && (
+    <div className="mt-4">
+      <p className="text-sm text-gray-600 mb-2">Preview:</p>
+      <img src={vinPreview} alt="VIN Preview" className="max-w-sm h-auto rounded-lg border border-blue-300" />
+    </div>
+  )}
+</div>
 
         <button
           type="submit"

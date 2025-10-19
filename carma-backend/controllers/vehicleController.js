@@ -235,7 +235,7 @@ const singleUpload = multer({
 }).single('vehicleImage');
 
 exports.updateVehicle = async (req, res) => {
-  singleUpload(req, res, async function (err) {
+  upload(req, res, async function (err) {
     if (err) {
       console.error('Vehicle upload error:', err);
       return res.status(400).json({ success: false, message: err.message });
@@ -259,11 +259,32 @@ exports.updateVehicle = async (req, res) => {
         });
       }
 
-      // Handle new image if uploaded
-      let imagePath = ownerCheck.rows[0].image_path;
-      if (req.file) {
-        imagePath = req.file.path;
-        console.log('✅ New vehicle image uploaded:', imagePath);
+      // Handle new vehicle image if uploaded
+      let vehicleImagePath = ownerCheck.rows[0].image_path;
+      if (req.files?.vehicleImage) {
+        vehicleImagePath = req.files.vehicleImage[0].path;
+        console.log('✅ New vehicle image uploaded:', vehicleImagePath);
+      }
+
+      // 🆕 NEW: Handle new VIN image if uploaded
+      if (req.files?.vinImage) {
+        const vinImagePath = req.files.vinImage[0].path;
+        console.log('✅ New VIN image uploaded:', vinImagePath);
+        
+        // Update VIN verification record with new image and reset status
+        await db.query(
+          `UPDATE vin_verification 
+           SET submitted_vin_image = $1, 
+               status = 'pending',
+               ocr_extracted_vin = NULL,
+               ocr_confidence = NULL,
+               verification_notes = 'Seller re-uploaded VIN image. Awaiting re-verification.',
+               date_verified = NULL
+           WHERE vehicle_id = $2`,
+          [vinImagePath, vehicleId]
+        );
+        
+        console.log('✅ VIN image updated, verification reset to pending');
       }
 
       // Update vehicle
@@ -273,12 +294,14 @@ exports.updateVehicle = async (req, res) => {
              description = $5, image_path = $6, mileage = $7, location = $8, transmission = $9
          WHERE vehicle_id = $10 AND user_id = $11
          RETURNING *`,
-        [make, model, year, price, description, imagePath, mileage, location, transmission, vehicleId, userId]
+        [make, model, year, price, description, vehicleImagePath, mileage, location, transmission, vehicleId, userId]
       );
 
       res.json({
         success: true,
-        message: 'Vehicle updated successfully',
+        message: req.files?.vinImage 
+          ? 'Vehicle updated successfully! New VIN image will be re-verified.' 
+          : 'Vehicle updated successfully',
         vehicle: updateResult.rows[0]
       });
 
