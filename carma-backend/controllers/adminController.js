@@ -444,7 +444,10 @@ exports.getSystemLogs = async (req, res) => {
       success: false,
       message: 'Failed to fetch system logs'
     });
-    // Get all vehicles for admin
+  }
+};
+
+// Get all vehicles for admin
 exports.getAllVehiclesForAdmin = async (req, res) => {
   try {
     const result = await db.query(`
@@ -490,7 +493,5 @@ exports.toggleVehicleVisibility = async (req, res) => {
   } catch (error) {
     console.error('Toggle visibility error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
   }
 };
