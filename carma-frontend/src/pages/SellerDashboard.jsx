@@ -32,7 +32,7 @@ function SellerDashboard() {
 
   const handleVehicleUpdate = () => {
     setShowAddForm(false);
-    setRefreshVehicles(prev => prev + 1); // Trigger MyVehicles to reload
+    setRefreshVehicles(prev => prev + 1);
   };
 
   const handleLogout = () => {
@@ -54,14 +54,24 @@ function SellerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
+      {/* Header - UPDATED */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-green-600">CARma</h1>
+              <span className="ml-4 text-gray-600">Seller Dashboard</span>
             </div>
+            {/* 🆕 NEW: Profile + Logout buttons */}
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/profile')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center space-x-2"
+              >
+                <span>👤</span>
+                <span>Profile</span>
+              </button>
+              
               <button
                 onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
@@ -145,14 +155,14 @@ function SellerDashboard() {
           </div>
         )}
 
-        {/* 🆕 MyVehicles Component - Replaces the manual vehicle display */}
+        {/* MyVehicles Component */}
         {isVerified && (
           <div className="mb-8">
             <MyVehicles key={refreshVehicles} />
           </div>
         )}
 
-        {/* Statistics */}
+        {/* Statistics - REMOVED PROFILE BUTTON */}
         {isVerified && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-bold mb-4">Quick Stats</h3>
@@ -177,20 +187,6 @@ function SellerDashboard() {
                   Awaiting admin VIN approval
                 </p>
               </div>
-              <button
-  onClick={() => navigate('/profile')}
-  className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition text-left"
->
-  <div className="flex items-center justify-between">
-    <div>
-      <h3 className="text-xl font-bold text-gray-800 mb-2">My Profile 👤</h3>
-      <p className="text-gray-600">Update your information and password</p>
-    </div>
-    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  </div>
-</button>
             </div>
           </div>
         )}
