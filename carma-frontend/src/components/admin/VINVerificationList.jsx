@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // 🆕 ADD THIS
 import API from '../../services/api';
 
 function VINVerificationList() {
+  const navigate = useNavigate(); // 🆕 ADD THIS
   const [pendingVINs, setPendingVINs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(null);
-
   useEffect(() => {
     loadPendingVINs();
   }, []);
@@ -68,9 +69,21 @@ function VINVerificationList() {
   return (
     <div className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">VIN Verifications</h1>
-          <p className="text-gray-600 mt-2">Review and verify vehicle VINs using OCR technology</p>
+        {/* 🆕 NEW: Back Button + Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition flex items-center space-x-2"
+            >
+              <span>←</span>
+              <span>Back to Dashboard</span>
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">VIN Verifications</h1>
+              <p className="text-gray-600 mt-1">Review and verify vehicle VINs using OCR technology</p>
+        </div>
+        </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">

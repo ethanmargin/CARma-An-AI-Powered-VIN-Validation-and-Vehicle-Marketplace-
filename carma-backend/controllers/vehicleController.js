@@ -208,7 +208,7 @@ exports.addVehicle = async (req, res) => {
   });
 };
 
-// Get all vehicles (for buyers to browse)
+// Get all vehicles (for buyers to browse) - EXCLUDE HIDDEN
 exports.getAllVehicles = async (req, res) => {
   try {
     const result = await db.query(`
@@ -232,6 +232,7 @@ exports.getAllVehicles = async (req, res) => {
       FROM vehicles v
       JOIN users u ON v.user_id = u.user_id
       LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
+      WHERE (v.visibility_status = 'visible' OR v.visibility_status IS NULL)
       ORDER BY v.created_at DESC
     `);
 

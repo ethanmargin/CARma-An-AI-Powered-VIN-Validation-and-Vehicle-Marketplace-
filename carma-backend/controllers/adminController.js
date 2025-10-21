@@ -444,5 +444,53 @@ exports.getSystemLogs = async (req, res) => {
       success: false,
       message: 'Failed to fetch system logs'
     });
+    // Get all vehicles for admin
+exports.getAllVehiclesForAdmin = async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        v.*,
+        u.name as seller_name,
+        u.email as seller_email,
+        vv.status as vin_status
+      FROM vehicles v
+      JOIN users u ON v.user_id = u.user_id
+      LEFT JOIN vin_verification vv ON v.vehicle_id = vv.vehicle_id
+      ORDER BY v.created_at DESC
+    `);
+
+    res.json({ success: true, vehicles: result.rows });
+  } catch (error) {
+    console.error('Get all vehicles error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Toggle vehicle visibility
+exports.toggleVehicleVisibility = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const { status } = req.body; // 'visible' or 'hidden'
+
+    await db.query(
+      'UPDATE vehicles SET visibility_status = $1 WHERE vehicle_id = $2',
+      [status, vehicleId]
+    );
+
+    // Log action
+    await db.query(
+      'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [req.user.user_id, 'VEHICLE_VISIBILITY_CHANGED', `Vehicle ${vehicleId} set to ${status}`]
+    );
+
+    res.json({ 
+      success: true, 
+      message: `Vehicle ${status === 'hidden' ? 'hidden' : 'shown'} successfully` 
+    });
+  } catch (error) {
+    console.error('Toggle visibility error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
   }
 };

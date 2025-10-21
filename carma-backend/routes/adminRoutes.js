@@ -26,4 +26,10 @@ router.post('/vehicles/:vehicleId/auto-verify-vin', adminController.autoVerifyVI
 // System Logs
 router.get('/logs', adminController.getSystemLogs);
 
+// Get all vehicles for admin
+router.get('/all-vehicles', adminController.getAllVehiclesForAdmin);
+
+// Toggle vehicle visibility
+router.put('/vehicles/:vehicleId/visibility', adminController.toggleVehicleVisibility);
+
 module.exports = router;
