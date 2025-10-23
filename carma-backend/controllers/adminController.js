@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const vinOCR = require('../services/vinOCR');
+const { performVINOCR } = require('./vinOcrController'); // 🆕 NEW
+const VINExtractor = require('../utils/vinExtractor'); // 🆕 NEW
 
 // Get all pending verifications
 exports.getPendingVerifications = async (req, res) => {
@@ -324,12 +326,12 @@ exports.verifyVIN = async (req, res) => {
   }
 };
 
-// Auto-verify VIN using OCR (Tesseract)
+// 🆕 IMPROVED: Auto-verify VIN using enhanced OCR
 exports.autoVerifyVIN = async (req, res) => {
   try {
     const { vehicleId } = req.params;
 
-    console.log('🤖 Starting auto-verification for vehicle:', vehicleId);
+    console.log('🤖 Starting ENHANCED auto-verification for vehicle:', vehicleId);
 
     // Get vehicle info
     const vehicleResult = await db.query(
@@ -353,29 +355,85 @@ exports.autoVerifyVIN = async (req, res) => {
       });
     }
 
-    // Run OCR verification
-    console.log('🔍 Running Tesseract OCR verification...');
-    const ocrResult = await vinOCR.verifyVINFromImage(
-      vehicle.submitted_vin_image,
-      vehicle.vin_number
-    );
+    console.log('📋 Expected VIN:', vehicle.vin_number);
 
-    console.log('📊 OCR Result:', ocrResult);
+    // 🆕 NEW: Use enhanced OCR with smart extraction
+    console.log('🔍 Running ENHANCED OCR with smart VIN extraction...');
+    
+    let ocrResult;
+    try {
+      // Use new enhanced OCR
+      const enhancedResult = await performVINOCR(vehicle.submitted_vin_image);
+      
+      ocrResult = {
+        extractedVIN: enhancedResult.vin,
+        confidence: enhancedResult.confidence >= 100 ? 'high' : 
+                   enhancedResult.confidence >= 70 ? 'medium' : 'low',
+        isValid: enhancedResult.isValid,
+        rawOcrResults: enhancedResult.rawOcrResults
+      };
+      
+      console.log('✅ Enhanced OCR Result:', ocrResult);
+    } catch (ocrError) {
+      console.error('⚠️ Enhanced OCR failed, falling back to legacy OCR:', ocrError);
+      // Fallback to old OCR if new one fails
+      ocrResult = await vinOCR.verifyVINFromImage(
+        vehicle.submitted_vin_image,
+        vehicle.vin_number
+      );
+    }
 
-    // Update verification based on OCR result
+    console.log('📊 Final OCR Result:', ocrResult);
+
+    // Calculate similarity
+    const extractedVIN = ocrResult.extractedVIN;
+    const expectedVIN = vehicle.vin_number;
+    
+    let similarity = 0;
+    if (extractedVIN && expectedVIN) {
+      // Calculate character-by-character similarity
+      const maxLength = Math.max(extractedVIN.length, expectedVIN.length);
+      let matches = 0;
+      
+      for (let i = 0; i < Math.min(extractedVIN.length, expectedVIN.length); i++) {
+        if (extractedVIN[i] === expectedVIN[i]) {
+          matches++;
+        }
+      }
+      
+      similarity = Math.round((matches / maxLength) * 100);
+    }
+
+    console.log(`📊 Similarity: ${similarity}% (${extractedVIN} vs ${expectedVIN})`);
+
+    // 🆕 UPDATED: Decision logic with enhanced validation
     let newStatus = 'pending';
     let verificationNotes = '';
+    let recommendation = '';
 
-    if (ocrResult.recommendation === 'auto_approve') {
+    if (extractedVIN === expectedVIN && ocrResult.isValid) {
+      // Perfect match with valid VIN
       newStatus = 'approved';
-      verificationNotes = `✅ Auto-approved by OCR. VIN matched: ${ocrResult.extractedVIN}. Confidence: ${ocrResult.confidence}`;
-    } else if (ocrResult.recommendation === 'reject') {
-      newStatus = 'rejected';
-      verificationNotes = `❌ Auto-rejected. ${ocrResult.reason}`;
-    } else {
+      recommendation = 'auto_approve';
+      verificationNotes = `✅ Auto-approved: Perfect VIN match. Extracted: ${extractedVIN}. Confidence: ${ocrResult.confidence}. Similarity: ${similarity}%`;
+    } else if (similarity >= 90 && ocrResult.isValid) {
+      // Very high similarity with valid VIN
+      newStatus = 'approved';
+      recommendation = 'auto_approve';
+      verificationNotes = `✅ Auto-approved: High similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrResult.confidence}`;
+    } else if (similarity >= 70) {
+      // Medium similarity - needs manual review
       newStatus = 'pending';
-      verificationNotes = `⚠️ Flagged for manual review. ${ocrResult.reason || ocrResult.message}`;
+      recommendation = 'manual_review';
+      verificationNotes = `⚠️ Manual review required: Moderate similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrResult.confidence}`;
+    } else {
+      // Low similarity - reject
+      newStatus = 'rejected';
+      recommendation = 'reject';
+      verificationNotes = `❌ Auto-rejected: Low similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN || 'NONE'}. Confidence: ${ocrResult.confidence}`;
     }
+
+    console.log(`🎯 Decision: ${newStatus} (${recommendation})`);
 
     // Update database
     await db.query(
@@ -388,7 +446,7 @@ exports.autoVerifyVIN = async (req, res) => {
        WHERE vehicle_id = $5`,
       [
         newStatus,
-        ocrResult.extractedVIN || null,
+        extractedVIN || null,
         ocrResult.confidence || 'low',
         verificationNotes,
         vehicleId
@@ -398,13 +456,19 @@ exports.autoVerifyVIN = async (req, res) => {
     // Log action
     await db.query(
       'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-      [req.user.user_id, 'VIN_OCR_VERIFICATION', `OCR verified vehicle ${vehicleId}: ${newStatus}`]
+      [req.user.user_id, 'VIN_OCR_VERIFICATION', `Enhanced OCR verified vehicle ${vehicleId}: ${newStatus} (${similarity}% similarity)`]
     );
 
     res.json({
       success: true,
-      message: 'OCR verification completed',
-      ocrResult: ocrResult,
+      message: 'Enhanced OCR verification completed',
+      ocrResult: {
+        ...ocrResult,
+        expectedVIN: expectedVIN,
+        extractedVIN: extractedVIN,
+        similarity: similarity,
+        recommendation: recommendation
+      },
       newStatus: newStatus,
       notes: verificationNotes
     });
@@ -415,6 +479,38 @@ exports.autoVerifyVIN = async (req, res) => {
       success: false,
       message: 'Failed to verify VIN',
       error: error.message
+    });
+  }
+};
+
+// 🆕 NEW: Test VIN extraction endpoint
+exports.testVINExtraction = async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Text required' 
+      });
+    }
+    
+    console.log('🧪 Testing VIN extraction from text:', text);
+    
+    const extractedVIN = VINExtractor.extractFromLabel(text);
+    const isValid = VINExtractor.isValidVIN(extractedVIN);
+    
+    res.json({
+      success: true,
+      extractedVIN: extractedVIN,
+      isValid: isValid,
+      originalText: text
+    });
+  } catch (error) {
+    console.error('Test extraction error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
     });
   }
 };
