@@ -1,14 +1,56 @@
 const sharp = require('sharp');
+const axios = require('axios');
+const fs = require('fs').promises;
+const path = require('path');
+const os = require('os');
 
 class VINImagePreprocessor {
+  /**
+   * Download image from URL to temp file
+   */
+  static async downloadImage(imageUrl) {
+    try {
+      console.log('📥 Downloading image from URL:', imageUrl);
+      
+      const response = await axios({
+        url: imageUrl,
+        method: 'GET',
+        responseType: 'arraybuffer'
+      });
+      
+      // Create temp file
+      const tempDir = os.tmpdir();
+      const tempFileName = `vin-${Date.now()}.jpg`;
+      const tempFilePath = path.join(tempDir, tempFileName);
+      
+      await fs.writeFile(tempFilePath, response.data);
+      
+      console.log('✅ Image downloaded to:', tempFilePath);
+      return tempFilePath;
+      
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      throw new Error(`Failed to download image: ${error.message}`);
+    }
+  }
+
   /**
    * Preprocess VIN image for better OCR accuracy
    */
   static async preprocessForOCR(inputPath) {
     try {
-      const outputPath = inputPath.replace(/(\.\w+)$/, '_processed$1');
+      // Check if inputPath is URL
+      let localPath = inputPath;
+      let isDownloaded = false;
       
-      await sharp(inputPath)
+      if (inputPath.startsWith('http://') || inputPath.startsWith('https://')) {
+        localPath = await this.downloadImage(inputPath);
+        isDownloaded = true;
+      }
+      
+      const outputPath = localPath.replace(/(\.\w+)$/, '_processed$1');
+      
+      await sharp(localPath)
         .grayscale()
         .normalize()
         .sharpen({
@@ -39,28 +81,65 @@ class VINImagePreprocessor {
   static async multiplePreprocessAttempts(inputPath) {
     const variants = [];
     
-    // Variant 1: Standard preprocessing
-    variants.push(await this.preprocessForOCR(inputPath));
-    
-    // Variant 2: Higher contrast
-    const highContrastPath = inputPath.replace(/(\.\w+)$/, '_highcontrast$1');
-    await sharp(inputPath)
-      .grayscale()
-      .linear(1.5, -(128 * 1.5) + 128)
-      .threshold(100)
-      .toFile(highContrastPath);
-    variants.push(highContrastPath);
-    
-    // Variant 3: Inverted (white text on black)
-    const invertedPath = inputPath.replace(/(\.\w+)$/, '_inverted$1');
-    await sharp(inputPath)
-      .grayscale()
-      .negate()
-      .normalize()
-      .toFile(invertedPath);
-    variants.push(invertedPath);
-    
-    return variants;
+    try {
+      // Check if inputPath is URL and download once
+      let localPath = inputPath;
+      let isDownloaded = false;
+      
+      if (inputPath.startsWith('http://') || inputPath.startsWith('https://')) {
+        localPath = await this.downloadImage(inputPath);
+        isDownloaded = true;
+      }
+      
+      // Variant 1: Standard preprocessing
+      const processed1 = localPath.replace(/(\.\w+)$/, '_processed1$1');
+      await sharp(localPath)
+        .grayscale()
+        .normalize()
+        .sharpen()
+        .threshold(128)
+        .toFile(processed1);
+      variants.push(processed1);
+      
+      // Variant 2: Higher contrast
+      const processed2 = localPath.replace(/(\.\w+)$/, '_processed2$1');
+      await sharp(localPath)
+        .grayscale()
+        .linear(1.5, -(128 * 1.5) + 128)
+        .threshold(100)
+        .toFile(processed2);
+      variants.push(processed2);
+      
+      // Variant 3: Inverted (white text on black)
+      const processed3 = localPath.replace(/(\.\w+)$/, '_processed3$1');
+      await sharp(localPath)
+        .grayscale()
+        .negate()
+        .normalize()
+        .toFile(processed3);
+      variants.push(processed3);
+      
+      console.log(`✅ Created ${variants.length} preprocessing variants`);
+      
+      return variants;
+      
+    } catch (error) {
+      console.error('Multiple preprocessing error:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Cleanup temp files
+   */
+  static async cleanupFiles(filePaths) {
+    for (const filePath of filePaths) {
+      try {
+        await fs.unlink(filePath);
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
   }
 }
 

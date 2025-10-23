@@ -9,10 +9,13 @@ const fs = require('fs').promises;
 async function performVINOCR(imagePath) {
   console.log('🔍 Starting VIN OCR process...');
   
+  const filesToCleanup = [];
+  
   try {
-    // Step 1: Preprocess image multiple ways
+    // Step 1: Download and preprocess image multiple ways
     console.log('📸 Preprocessing image...');
     const processedImages = await VINImagePreprocessor.multiplePreprocessAttempts(imagePath);
+    filesToCleanup.push(...processedImages);
     
     // Step 2: Run OCR on all variants
     console.log('🤖 Running OCR on variants...');
@@ -28,8 +31,6 @@ async function performVINOCR(imagePath) {
         ocrResults.push(result.data.text);
         console.log(`✅ OCR result: ${result.data.text}`);
         
-        // Cleanup processed image
-        await fs.unlink(processedPath).catch(() => {});
       } catch (err) {
         console.error('OCR error on variant:', err);
       }
@@ -49,6 +50,9 @@ async function performVINOCR(imagePath) {
     console.log('✅ Final VIN:', extractedVIN);
     console.log('✅ Valid:', isValid);
     
+    // Cleanup temp files
+    await VINImagePreprocessor.cleanupFiles(filesToCleanup);
+    
     return {
       vin: extractedVIN,
       isValid: isValid,
@@ -58,6 +62,10 @@ async function performVINOCR(imagePath) {
     
   } catch (error) {
     console.error('❌ VIN OCR Error:', error);
+    
+    // Cleanup temp files even on error
+    await VINImagePreprocessor.cleanupFiles(filesToCleanup);
+    
     throw error;
   }
 }
@@ -70,20 +78,29 @@ async function testVINExtraction(req, res) {
     const { text } = req.body;
     
     if (!text) {
-      return res.status(400).json({ error: 'Text required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Text required' 
+      });
     }
     
-    const vin = VINExtractor.extractFromLabel(text);
-    const isValid = VINExtractor.isValidVIN(vin);
+    console.log('🧪 Testing VIN extraction from text:', text);
+    
+    const extractedVIN = VINExtractor.extractFromLabel(text);
+    const isValid = VINExtractor.isValidVIN(extractedVIN);
     
     res.json({
       success: true,
-      vin: vin,
+      extractedVIN: extractedVIN,
       isValid: isValid,
       originalText: text
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Test extraction error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 }
 
