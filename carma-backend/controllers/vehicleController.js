@@ -2,7 +2,9 @@ const db = require('../config/db');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const vinOCR = require('../services/vinOCR'); // 🆕 NEW: Import OCR service
+const vinOCR = require('../services/vinOCR');
+const { performVINOCR } = require('./vinOcrController'); // 🆕 NEW: Enhanced OCR
+const VINExtractor = require('../utils/vinExtractor'); // 🆕 NEW: Smart VIN extraction
 
 // Configure Cloudinary
 cloudinary.config({
@@ -40,31 +42,97 @@ const upload = multer({
   { name: 'vinImage', maxCount: 1 }
 ]);
 
-// 🆕 NEW: Helper function to run OCR verification in background
+// 🆕 UPDATED: Helper function to run ENHANCED OCR verification in background
 async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) {
   try {
-    console.log(`🔍 Running automatic OCR for vehicle ${vehicleId}...`);
+    console.log(`🤖 Starting ENHANCED auto-verification for vehicle ${vehicleId}...`);
+    console.log(`📋 Expected VIN: ${expectedVIN}`);
+    console.log(`📸 VIN Image URL: ${vinImagePath}`);
     
-    // Run OCR
-    const ocrResult = await vinOCR.verifyVINFromImage(vinImagePath, expectedVIN);
+    let ocrResult;
+    let extractedVIN;
+    let similarity = 0;
+    let ocrConfidence = 'low';
     
-    console.log('📊 OCR Result:', ocrResult);
-
-    // Determine status based on OCR result
+    try {
+      // 🆕 NEW: Use enhanced OCR with smart extraction
+      console.log('🔍 Running ENHANCED OCR with smart VIN extraction...');
+      const enhancedResult = await performVINOCR(vinImagePath);
+      
+      console.log('✅ Enhanced OCR completed:', enhancedResult);
+      
+      extractedVIN = enhancedResult.vin;
+      ocrConfidence = enhancedResult.confidence >= 100 ? 'high' : 
+                     enhancedResult.confidence >= 70 ? 'medium' : 'low';
+      
+      // Calculate similarity
+      if (extractedVIN && expectedVIN) {
+        const maxLength = Math.max(extractedVIN.length, expectedVIN.length);
+        let matches = 0;
+        
+        for (let i = 0; i < Math.min(extractedVIN.length, expectedVIN.length); i++) {
+          if (extractedVIN[i] === expectedVIN[i]) {
+            matches++;
+          }
+        }
+        
+        similarity = Math.round((matches / maxLength) * 100);
+      }
+      
+      console.log(`📊 VIN Comparison:`);
+      console.log(`   Expected: ${expectedVIN}`);
+      console.log(`   Extracted: ${extractedVIN}`);
+      console.log(`   Similarity: ${similarity}%`);
+      console.log(`   Valid: ${enhancedResult.isValid}`);
+      
+      // Build OCR result object
+      ocrResult = {
+        success: true,
+        extractedVIN: extractedVIN,
+        expectedVIN: expectedVIN,
+        similarity: similarity,
+        confidence: ocrConfidence,
+        isValid: enhancedResult.isValid
+      };
+      
+    } catch (enhancedOCRError) {
+      console.error('⚠️ Enhanced OCR failed, falling back to legacy OCR:', enhancedOCRError);
+      // Fallback to legacy OCR
+      ocrResult = await vinOCR.verifyVINFromImage(vinImagePath, expectedVIN);
+      extractedVIN = ocrResult.extractedVIN;
+      similarity = ocrResult.similarity || 0;
+      ocrConfidence = ocrResult.confidence || 'low';
+    }
+    
+    // 🆕 UPDATED: Determine status based on similarity and validation
     let newStatus = 'pending';
     let verificationNotes = '';
-
-    if (ocrResult.recommendation === 'auto_approve') {
+    let recommendation = '';
+    
+    if (extractedVIN === expectedVIN && ocrResult.isValid) {
+      // Perfect match with valid VIN
       newStatus = 'approved';
-      verificationNotes = `✅ ${ocrResult.message} (Auto-verified by AI on upload)`;
-    } else if (ocrResult.recommendation === 'reject') {
-      newStatus = 'rejected';
-      verificationNotes = `❌ ${ocrResult.reason}`;
-    } else {
+      recommendation = 'auto_approve';
+      verificationNotes = `✅ Auto-approved: Perfect VIN match (100%). Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Valid check digit.`;
+    } else if (similarity >= 90 && ocrResult.isValid) {
+      // Very high similarity with valid VIN
+      newStatus = 'approved';
+      recommendation = 'auto_approve';
+      verificationNotes = `✅ Auto-approved: High similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Valid check digit.`;
+    } else if (similarity >= 70) {
+      // Medium similarity - needs manual review
       newStatus = 'pending';
-      verificationNotes = `⚠️ ${ocrResult.reason || ocrResult.message}`;
+      recommendation = 'manual_review';
+      verificationNotes = `⚠️ Manual review required: Moderate similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Admin will verify.`;
+    } else {
+      // Low similarity - reject
+      newStatus = 'rejected';
+      recommendation = 'reject';
+      verificationNotes = `❌ Auto-rejected: Low similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN || 'NONE'}. Confidence: ${ocrConfidence}. Please re-upload clearer VIN image.`;
     }
-
+    
+    console.log(`🎯 OCR Decision: ${newStatus} (${recommendation})`);
+    
     // Update database
     await db.query(
       `UPDATE vin_verification 
@@ -76,21 +144,21 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
        WHERE vehicle_id = $5`,
       [
         newStatus,
-        ocrResult.extractedVIN || null,
-        ocrResult.confidence || 'low',
+        extractedVIN || null,
+        ocrConfidence,
         verificationNotes,
         vehicleId
       ]
     );
-
+    
     // Log OCR action
     await db.query(
       'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-      [userId, 'VIN_AUTO_OCR', `Auto-OCR for vehicle ${vehicleId}: ${newStatus}`]
+      [userId, 'VIN_AUTO_OCR', `Enhanced OCR for vehicle ${vehicleId}: ${newStatus} (${similarity}% similarity)`]
     );
-
-    console.log(`✅ Automatic OCR completed for vehicle ${vehicleId}: ${newStatus}`);
-
+    
+    console.log(`✅ Automatic ENHANCED OCR completed for vehicle ${vehicleId}: ${newStatus}`);
+    
   } catch (error) {
     console.error(`❌ OCR verification failed for vehicle ${vehicleId}:`, error);
     
@@ -180,8 +248,8 @@ exports.addVehicle = async (req, res) => {
         [vehicleId, 'pending', vinImagePath]
       );
 
-      // 🆕 NEW: Automatically run OCR verification in background
-      console.log('🤖 Auto-triggering OCR verification...');
+      // 🆕 UPDATED: Automatically run ENHANCED OCR verification in background
+      console.log('🤖 Auto-triggering ENHANCED OCR verification...');
       
       // Run OCR without waiting (async background process)
       runOCRVerification(vehicleId, vinImagePath, vin_number, userId).catch(error => {
@@ -192,12 +260,12 @@ exports.addVehicle = async (req, res) => {
       // Log action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image - OCR auto-triggered`]
+        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image - Enhanced OCR auto-triggered`]
       );
 
       res.status(201).json({
         success: true,
-        message: '🚗 Vehicle added successfully! 🤖 AI is automatically verifying your VIN...',
+        message: '🚗 Vehicle added successfully! 🤖 AI is automatically verifying your VIN with enhanced detection...',
         vehicle: result.rows[0]
       });
 
@@ -341,7 +409,7 @@ exports.updateVehicle = async (req, res) => {
         console.log('✅ New vehicle image uploaded:', vehicleImagePath);
       }
 
-      // 🆕 UPDATED: Handle new VIN image and auto-trigger OCR
+      // 🆕 UPDATED: Handle new VIN image and auto-trigger ENHANCED OCR
       if (req.files?.vinImage) {
         const vinImagePath = req.files.vinImage[0].path;
         console.log('✅ New VIN image uploaded:', vinImagePath);
@@ -353,7 +421,7 @@ exports.updateVehicle = async (req, res) => {
                status = 'pending',
                ocr_extracted_vin = NULL,
                ocr_confidence = NULL,
-               verification_notes = 'Seller re-uploaded VIN image. Auto-verifying...',
+               verification_notes = 'Seller re-uploaded VIN image. Enhanced AI is auto-verifying...',
                date_verified = NULL
            WHERE vehicle_id = $2`,
           [vinImagePath, vehicleId]
@@ -361,8 +429,8 @@ exports.updateVehicle = async (req, res) => {
         
         console.log('✅ VIN image updated, verification reset to pending');
         
-        // 🆕 NEW: Auto-trigger OCR on re-upload
-        console.log('🤖 Auto-triggering OCR verification on re-upload...');
+        // 🆕 UPDATED: Auto-trigger ENHANCED OCR on re-upload
+        console.log('🤖 Auto-triggering ENHANCED OCR verification on re-upload...');
         runOCRVerification(vehicleId, vinImagePath, vehicle.vin_number, userId).catch(error => {
           console.error('❌ Background OCR error:', error);
         });
@@ -381,7 +449,7 @@ exports.updateVehicle = async (req, res) => {
       res.json({
         success: true,
         message: req.files?.vinImage 
-          ? '🚗 Vehicle updated! 🤖 AI is automatically re-verifying your VIN...' 
+          ? '🚗 Vehicle updated! 🤖 Enhanced AI is automatically re-verifying your VIN...' 
           : 'Vehicle updated successfully',
         vehicle: updateResult.rows[0]
       });
@@ -466,6 +534,7 @@ exports.bookmarkVehicle = async (req, res) => {
     );
 
     res.json({ success: true, message: 'Vehicle bookmarked!', bookmarked: true });
+
   } catch (error) {
     console.error('Bookmark error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -481,6 +550,8 @@ exports.getBookmarkedVehicles = async (req, res) => {
       SELECT 
         v.*,
         u.name as seller_name,
+        u.email as seller_email,
+        u.mobile_number as seller_mobile,
         vv.status as vin_status,
         b.created_at as bookmarked_at
       FROM bookmarks b
@@ -492,8 +563,11 @@ exports.getBookmarkedVehicles = async (req, res) => {
     `, [userId]);
 
     res.json({ success: true, bookmarks: result.rows });
+
   } catch (error) {
     console.error('Get bookmarks error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+module.exports = exports;
