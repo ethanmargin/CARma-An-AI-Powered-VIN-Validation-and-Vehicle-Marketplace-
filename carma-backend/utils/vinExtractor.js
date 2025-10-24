@@ -196,12 +196,13 @@ if (!vin.includes('GAWR') && !vin.includes('GVWR')) {
       console.log(`   ❌ STRONG PENALTY: Contains weight rating text (GAWR/GVWR)`);
     }
     
-    // 🆕 NEW: -200 points if mostly numbers (like weight values)
-    const numberRatio = (vin.match(/[0-9]/g) || []).length / vin.length;
-    if (numberRatio > 0.7) {
-      score -= 200;
-      console.log(`   ⚠️ Too many numbers (${Math.round(numberRatio * 100)}% - likely weight data)`);
-    }
+    // 🆕 UPDATED: Check for weight-specific patterns instead of just number ratio
+// Weight data has specific patterns like "1765LBS" or "GVWR2385"
+const hasWeightPattern = /\d{3,4}LBS/i.test(vin) || /GVWR\d+/i.test(vin) || /GAWR\d+/i.test(vin);
+if (hasWeightPattern) {
+  score -= 200;
+  console.log(`   ⚠️ Contains weight pattern (LBS/GVWR/GAWR with numbers)`);
+}
     
     return score;
   }
