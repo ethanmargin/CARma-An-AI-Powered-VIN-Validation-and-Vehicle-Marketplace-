@@ -76,7 +76,7 @@ class VINImagePreprocessor {
   }
 
   /**
-   * Multiple preprocessing attempts for difficult images
+   * Multiple preprocessing attempts for difficult images (5 variants for different label types)
    */
   static async multiplePreprocessAttempts(inputPath) {
     const variants = [];
@@ -91,7 +91,11 @@ class VINImagePreprocessor {
         isDownloaded = true;
       }
       
-      // Variant 1: Standard preprocessing
+      // Get image metadata first
+      const metadata = await sharp(localPath).metadata();
+      console.log(`📏 Image size: ${metadata.width}x${metadata.height}`);
+      
+      // Variant 1: Standard preprocessing (works for most Honda/Toyota labels)
       const processed1 = localPath.replace(/(\.\w+)$/, '_processed1$1');
       await sharp(localPath)
         .grayscale()
@@ -101,7 +105,7 @@ class VINImagePreprocessor {
         .toFile(processed1);
       variants.push(processed1);
       
-      // Variant 2: Higher contrast
+      // Variant 2: Higher contrast (for faded labels)
       const processed2 = localPath.replace(/(\.\w+)$/, '_processed2$1');
       await sharp(localPath)
         .grayscale()
@@ -110,7 +114,7 @@ class VINImagePreprocessor {
         .toFile(processed2);
       variants.push(processed2);
       
-      // Variant 3: Inverted (white text on black)
+      // Variant 3: Inverted (white text on black background)
       const processed3 = localPath.replace(/(\.\w+)$/, '_processed3$1');
       await sharp(localPath)
         .grayscale()
@@ -118,6 +122,31 @@ class VINImagePreprocessor {
         .normalize()
         .toFile(processed3);
       variants.push(processed3);
+      
+      // 🆕 NEW: Variant 4: Increased resolution + sharpen (for small text like Porsche labels)
+      const processed4 = localPath.replace(/(\.\w+)$/, '_processed4$1');
+      await sharp(localPath)
+        .resize({
+          width: Math.min(metadata.width * 2, 4000), // Double size, max 4000px
+          fit: 'inside',
+          kernel: sharp.kernel.lanczos3
+        })
+        .grayscale()
+        .sharpen({ sigma: 2 })
+        .normalize()
+        .threshold(130)
+        .toFile(processed4);
+      variants.push(processed4);
+      
+      // 🆕 NEW: Variant 5: Very high contrast (for luxury car labels - Porsche, BMW, Mercedes)
+      const processed5 = localPath.replace(/(\.\w+)$/, '_processed5$1');
+      await sharp(localPath)
+        .grayscale()
+        .linear(2.0, -(128 * 2.0) + 128) // Very aggressive contrast
+        .sharpen({ sigma: 1.5 })
+        .threshold(90)
+        .toFile(processed5);
+      variants.push(processed5);
       
       console.log(`✅ Created ${variants.length} preprocessing variants`);
       

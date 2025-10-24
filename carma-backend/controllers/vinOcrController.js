@@ -12,27 +12,31 @@ async function performVINOCR(imagePath) {
   const filesToCleanup = [];
   
   try {
-    // Step 1: Download and preprocess image multiple ways
+    // Step 1: Download and preprocess image multiple ways (now 5 variants!)
     console.log('📸 Preprocessing image...');
     const processedImages = await VINImagePreprocessor.multiplePreprocessAttempts(imagePath);
     filesToCleanup.push(...processedImages);
     
     // Step 2: Run OCR on all variants
-    console.log('🤖 Running OCR on variants...');
+    console.log(`🤖 Running OCR on ${processedImages.length} variants...`);
     const ocrResults = [];
     
-    for (const processedPath of processedImages) {
+    for (let i = 0; i < processedImages.length; i++) {
+      const processedPath = processedImages[i];
       try {
+        // Use different OCR modes for different variants
+        const ocrMode = i < 3 ? Tesseract.PSM.SINGLE_LINE : Tesseract.PSM.AUTO;
+        
         const result = await Tesseract.recognize(processedPath, 'eng', {
           tessedit_char_whitelist: 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789',
-          tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE
+          tessedit_pageseg_mode: ocrMode // AUTO mode for variants 4 & 5
         });
         
         ocrResults.push(result.data.text);
-        console.log(`✅ OCR result: ${result.data.text}`);
+        console.log(`✅ OCR result (variant ${i + 1}): ${result.data.text.substring(0, 100)}...`);
         
       } catch (err) {
-        console.error('OCR error on variant:', err);
+        console.error(`OCR error on variant ${i + 1}:`, err);
       }
     }
     
