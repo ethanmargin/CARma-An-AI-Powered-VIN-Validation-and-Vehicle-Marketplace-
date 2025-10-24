@@ -143,8 +143,10 @@ class VINExtractor {
       console.log(`   🎯 Found VIN near MADE IN keyword!`);
     }
     
-    // +100 points if near VIN keywords
-    const vinKeywords = ['V.I.N.', 'V.I.N', 'VIN:', 'VIN ', 'V I N', 'VIN', '++', '+n', '+ +', '+ n'];
+    // 🆕 UPDATED: +100 points if near VIN keywords (BUT NOT ++ for VINs with GAWR/GVWR!)
+const vinKeywords = vin.includes('GAWR') || vin.includes('GVWR') 
+  ? ['V.I.N.', 'V.I.N', 'VIN:', 'VIN ', 'V I N', 'VIN'] // No ++ for weight ratings
+  : ['V.I.N.', 'V.I.N', 'VIN:', 'VIN ', 'V I N', 'VIN', '++', '+n', '+ +', '+ n']; // Include ++ for real VINs
     const upperText = originalText.toUpperCase();
     const cleanedText = originalText.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     
@@ -168,16 +170,18 @@ class VINExtractor {
       }
     }
     
-    // +30 points if VIN appears with common prefix patterns
-    const vinPrefixes = ['++', '+n', '+ +', '+ n', 'VIN', 'V.I.N'];
-    for (const prefix of vinPrefixes) {
-      const pattern = prefix.replace(/[^A-Z0-9]/gi, '').toUpperCase() + vin;
-      if (cleanedText.includes(pattern)) {
-        score += 30;
-        console.log(`   ✓ VIN found with prefix "${prefix}"`);
-        break;
-      }
+    // 🆕 UPDATED: +30 points if VIN appears with common prefix patterns (BUT NOT if it contains GAWR/GVWR!)
+if (!vin.includes('GAWR') && !vin.includes('GVWR')) {
+  const vinPrefixes = ['++', '+n', '+ +', '+ n', 'VIN', 'V.I.N'];
+  for (const prefix of vinPrefixes) {
+    const pattern = prefix.replace(/[^A-Z0-9]/gi, '').toUpperCase() + vin;
+    if (cleanedText.includes(pattern)) {
+      score += 30;
+      console.log(`   ✓ VIN found with prefix "${prefix}"`);
+      break;
     }
+  }
+}
     
     // +20 points if alphanumeric mix
     const hasLetters = /[A-Z]/.test(vin);
