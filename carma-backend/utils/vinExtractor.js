@@ -1,89 +1,10 @@
 class VINExtractor {
-  // Characters NOT allowed in VINs
-  static EXCLUDED_CHARS = /[IOQ]/g;
-  
-  // Valid VIN characters only
-  static VALID_VIN_CHARS = /[A-HJ-NPR-Z0-9]/g;
-  
   /**
-   * Clean and extract VIN from messy OCR text
-   */
-  static extractVIN(ocrText) {
-    console.log('🔍 Original OCR text:', ocrText);
-    
-    // Step 1: Remove all whitespace and special characters
-    let cleaned = ocrText.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    console.log('✅ After removing special chars:', cleaned);
-    
-    // Step 2: Remove invalid VIN characters (I, O, Q)
-    cleaned = cleaned.replace(this.EXCLUDED_CHARS, '');
-    console.log('✅ After removing I,O,Q:', cleaned);
-    
-    // Step 3: Try to find 17 consecutive valid characters
-    const vinCandidates = this.findVINCandidates(cleaned);
-    console.log('🎯 VIN Candidates found:', vinCandidates);
-    
-    // Step 4: Validate candidates
-    for (const candidate of vinCandidates) {
-      if (this.isValidVIN(candidate)) {
-        console.log('✅ Valid VIN found:', candidate);
-        return candidate;
-      }
-    }
-    
-    // Step 5: If no valid VIN, return best candidate
-    return vinCandidates[0] || null;
-  }
-  
-  /**
-   * Find all possible 17-character sequences
-   */
-  static findVINCandidates(text) {
-    const candidates = [];
-    
-    // Method 1: Find any 17 consecutive valid characters
-    const matches = text.match(/[A-HJ-NPR-Z0-9]{17,}/g);
-    if (matches) {
-      matches.forEach(match => {
-        if (match.length === 17) {
-          candidates.push(match);
-        } else if (match.length > 17) {
-          // Try sliding window
-          for (let i = 0; i <= match.length - 17; i++) {
-            candidates.push(match.substr(i, 17));
-          }
-        }
-      });
-    }
-    
-    // Method 2: Look for patterns (most VINs start with digit)
-    const patternMatches = text.match(/[1-5][A-HJ-NPR-Z0-9]{16}/g);
-    if (patternMatches) {
-      candidates.push(...patternMatches);
-    }
-    
-    // Remove duplicates
-    return [...new Set(candidates)];
-  }
-  
-  /**
-   * Validate VIN structure and check digit
+   * Check if VIN has valid check digit (position 9)
    */
   static isValidVIN(vin) {
-    // Must be exactly 17 characters
-    if (vin.length !== 17) return false;
+    if (!vin || vin.length !== 17) return false;
     
-    // Must contain only valid characters
-    if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) return false;
-    
-    // Validate check digit (position 9)
-    return this.validateCheckDigit(vin);
-  }
-  
-  /**
-   * Validate VIN check digit (position 9)
-   */
-  static validateCheckDigit(vin) {
     const weights = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
     const transliteration = {
       'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8,
@@ -94,62 +15,215 @@ class VINExtractor {
     let sum = 0;
     for (let i = 0; i < 17; i++) {
       const char = vin[i];
-      const value = /[0-9]/.test(char) ? parseInt(char) : transliteration[char];
+      let value;
       
-      if (value === undefined) return false;
+      if (char >= '0' && char <= '9') {
+        value = parseInt(char);
+      } else {
+        value = transliteration[char];
+        if (value === undefined) return false;
+      }
       
       sum += value * weights[i];
     }
     
-    const remainder = sum % 11;
-    const checkDigit = remainder === 10 ? 'X' : remainder.toString();
+    const checkDigit = sum % 11;
+    const ninthChar = vin[8];
     
-    return checkDigit === vin[8];
+    if (checkDigit === 10) {
+      return ninthChar === 'X';
+    } else {
+      return ninthChar === checkDigit.toString();
+    }
   }
-  
+
   /**
-   * Smart extraction - tries multiple strategies
+   * Check if VIN starts with valid manufacturer code
    */
-  static smartExtract(ocrTexts) {
-    if (!Array.isArray(ocrTexts)) {
-      ocrTexts = [ocrTexts];
+  static hasValidManufacturerCode(vin) {
+    if (!vin || vin.length < 1) return false;
+    
+    const firstChar = vin[0];
+    
+    // Valid first characters for VINs:
+    // 1-5: USA
+    // J: Japan
+    // K: Korea
+    // L: China
+    // S: UK
+    // V: France/Spain
+    // W: Germany
+    // Z: Italy
+    const validFirstChars = ['1', '2', '3', '4', '5', 'J', 'K', 'L', 'S', 'V', 'W', 'Z'];
+    
+    return validFirstChars.includes(firstChar);
+  }
+
+  /**
+   * Check if string contains common label words (not a VIN)
+   */
+  static containsLabelWords(str) {
+    const labelWords = [
+      'BUMPER', 'SAFETY', 'MOTOR', 'VEHICLE', 'THEFT', 'PREVENTION',
+      'FEDERAL', 'STANDARD', 'MANUFACTURE', 'PASSENGER', 'CONFORM',
+      'APPLICABLE', 'EFFECT', 'SHOWN', 'ABOVE', 'DATE'
+    ];
+    
+    const upperStr = str.toUpperCase();
+    return labelWords.some(word => upperStr.includes(word));
+  }
+
+  /**
+   * Calculate score for VIN candidate (higher = better)
+   */
+  static scoreVINCandidate(vin, originalText) {
+    let score = 0;
+    
+    // +100 points if valid check digit
+    if (this.isValidVIN(vin)) {
+      score += 100;
     }
     
-    const allCandidates = [];
+    // +50 points if has valid manufacturer code
+    if (this.hasValidManufacturerCode(vin)) {
+      score += 50;
+    }
     
-    for (const text of ocrTexts) {
-      const vin = this.extractVIN(text);
-      if (vin) {
-        allCandidates.push({
-          vin: vin,
-          confidence: this.isValidVIN(vin) ? 100 : 50,
-          source: text
-        });
+    // -100 points if contains label words
+    if (this.containsLabelWords(vin)) {
+      score -= 100;
+    }
+    
+    // +100 points if near VIN keywords (VERY IMPORTANT!)
+    const vinKeywords = ['V.I.N.', 'V.I.N', 'VIN:', 'VIN ', 'V I N', 'VIN', '++', '+n', '+ +', '+ n'];
+    const upperText = originalText.toUpperCase();
+    const cleanedText = originalText.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
+    // Check if VIN appears near keywords in original text
+    for (const keyword of vinKeywords) {
+      const keywordIndex = upperText.indexOf(keyword);
+      if (keywordIndex !== -1) {
+        // Find VIN position in original text (with some tolerance for spaces/special chars)
+        const vinPattern = vin.split('').join('[^A-Z0-9]{0,3}'); // Allow 0-3 special chars between each character
+        const vinRegex = new RegExp(vinPattern, 'i');
+        const match = upperText.match(vinRegex);
+        
+        if (match) {
+          const vinIndex = match.index;
+          const distance = Math.abs(vinIndex - keywordIndex);
+          
+          if (distance < 20) { // Within 20 characters
+            score += 100;
+            console.log(`   🎯 Found VIN near keyword "${keyword}" (distance: ${distance})`);
+            break; // Only count once
+          }
+        }
       }
     }
     
-    // Sort by confidence
-    allCandidates.sort((a, b) => b.confidence - a.confidence);
+    // +30 points if VIN appears with common prefix patterns
+    const vinPrefixes = ['++', '+n', '+ +', '+ n', 'VIN', 'V.I.N'];
+    for (const prefix of vinPrefixes) {
+      const pattern = prefix.replace(/[^A-Z0-9]/gi, '').toUpperCase() + vin;
+      if (cleanedText.includes(pattern)) {
+        score += 30;
+        console.log(`   ✓ VIN found with prefix "${prefix}"`);
+        break;
+      }
+    }
     
-    return allCandidates.length > 0 ? allCandidates[0].vin : null;
+    // +20 points if alphanumeric mix (real VINs have both)
+    const hasLetters = /[A-Z]/.test(vin);
+    const hasNumbers = /[0-9]/.test(vin);
+    if (hasLetters && hasNumbers) {
+      score += 20;
+    }
+    
+    // -50 points if contains "GAWR" or "GVWR" (weight ratings, not VINs)
+    if (vin.includes('GAWR') || vin.includes('GVWR')) {
+      score -= 50;
+      console.log(`   ⚠️ Contains weight rating text (GAWR/GVWR)`);
+    }
+    
+    return score;
   }
-  
+
   /**
-   * Extract VIN from image label text
+   * Extract VIN from typical label format
    */
-  static extractFromLabel(labelText) {
-    console.log('📋 Processing label text:', labelText);
+  static extractFromLabel(text) {
+    console.log('🔍 Original OCR text:', text);
     
-    // Remove common label words
-    const cleaned = labelText
-      .replace(/V\.?I\.?N\.?/gi, '')
-      .replace(/VIN/gi, '')
-      .replace(/VEHICLE\s+IDENTIFICATION\s+NUMBER/gi, '')
-      .replace(/BARCODE/gi, '')
-      .replace(/MANUFACTURED/gi, '')
-      .replace(/PASSENGER\s+CAR/gi, '');
+    // Remove special characters but keep alphanumeric
+    let cleaned = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    console.log('✅ After removing special chars:', cleaned);
     
-    return this.extractVIN(cleaned);
+    // Remove invalid VIN characters (I, O, Q)
+    cleaned = cleaned.replace(/[IOQ]/g, '');
+    console.log('✅ After removing I,O,Q:', cleaned);
+    
+    // Find all 17-character sequences
+    const candidates = [];
+    for (let i = 0; i <= cleaned.length - 17; i++) {
+      const candidate = cleaned.substring(i, i + 17);
+      candidates.push(candidate);
+    }
+    
+    console.log('🎯 VIN Candidates found:', candidates);
+    
+    // Score all candidates and pick the best one
+    let bestCandidate = null;
+    let bestScore = -Infinity;
+    
+    for (const candidate of candidates) {
+      const score = this.scoreVINCandidate(candidate, text);
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+      
+      // Log top candidates for debugging
+      if (score > 50) {
+        console.log(`   Candidate: ${candidate}, Score: ${score}`);
+      }
+    }
+    
+    if (bestCandidate && bestScore > 0) {
+      console.log(`✅ Best VIN candidate: ${bestCandidate} (score: ${bestScore})`);
+      return bestCandidate;
+    }
+    
+    console.log('❌ No valid VIN found');
+    return null;
+  }
+
+  /**
+   * Smart extraction from multiple OCR results
+   */
+  static smartExtract(ocrResults) {
+    if (!Array.isArray(ocrResults) || ocrResults.length === 0) {
+      return null;
+    }
+    
+    // Try each OCR result and pick the best VIN
+    let bestVIN = null;
+    let bestScore = -Infinity;
+    
+    for (const result of ocrResults) {
+      const vin = this.extractFromLabel(result);
+      
+      if (vin) {
+        const score = this.scoreVINCandidate(vin, result);
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestVIN = vin;
+        }
+      }
+    }
+    
+    return bestVIN;
   }
 }
 
