@@ -8,13 +8,16 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     year: '',
     price: '',
     description: '',
+    vin_number: '', // 🆕 Can now edit VIN
     mileage: '',
     location: '',
-    transmission: ''
+    transmission: '',
+    fuel_type: '' // 🆕 NEW
   });
   const [vehicleImage, setVehicleImage] = useState(null);
-  const [vinImage, setVinImage] = useState(null); // 🆕 NEW
-  const [vinPreview, setVinPreview] = useState(null); // 🆕 NEW
+  const [vinImage, setVinImage] = useState(null);
+  const [vinPreview, setVinPreview] = useState(null);
+  const [vinStatus, setVinStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,10 +29,13 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
         year: vehicle.year || '',
         price: vehicle.price || '',
         description: vehicle.description || '',
+        vin_number: vehicle.vin_number || '', // 🆕 Load VIN
         mileage: vehicle.mileage || '',
         location: vehicle.location || '',
-        transmission: vehicle.transmission || ''
+        transmission: vehicle.transmission || '',
+        fuel_type: vehicle.fuel_type || '' // 🆕 Load fuel type
       });
+      setVinStatus(vehicle.vin_status || '');
     }
   }, [vehicle]);
 
@@ -41,7 +47,6 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     setVehicleImage(e.target.files[0]);
   };
 
-  // 🆕 NEW: Handle VIN image change
   const handleVinImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -54,50 +59,53 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
     }
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-  try {
-    const data = new FormData();
-    data.append('make', formData.make);
-    data.append('model', formData.model);
-    data.append('year', formData.year);
-    data.append('price', formData.price);
-    data.append('description', formData.description);
-    data.append('mileage', formData.mileage);
-    data.append('location', formData.location);
-    data.append('transmission', formData.transmission);
-    
-    if (vehicleImage) {
-      data.append('vehicleImage', vehicleImage);
+    try {
+      const data = new FormData();
+      data.append('make', formData.make);
+      data.append('model', formData.model);
+      data.append('year', formData.year);
+      data.append('price', formData.price);
+      data.append('description', formData.description);
+      data.append('vin_number', formData.vin_number); // 🆕 Send VIN
+      data.append('mileage', formData.mileage);
+      data.append('location', formData.location);
+      data.append('transmission', formData.transmission);
+      data.append('fuel_type', formData.fuel_type); // 🆕 Send fuel type
+      
+      if (vehicleImage) {
+        data.append('vehicleImage', vehicleImage);
+      }
+
+      if (vinImage) {
+        data.append('vinImage', vinImage);
+      }
+
+      const response = await API.put(`/vehicles/${vehicle.vehicle_id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (vinImage) {
+        alert('✅ Vehicle updated successfully!\n\n🤖 AI is automatically re-verifying your VIN. Check "My Vehicles" in a few seconds to see the result!');
+      } else if (formData.vin_number !== vehicle.vin_number) {
+        alert('✅ Vehicle and VIN updated!\n\n⚠️ VIN verification reset to pending. Please re-upload VIN image for auto-verification.');
+      } else {
+        alert('✅ Vehicle updated successfully!');
+      }
+
+      if (onSuccess) onSuccess();
+      onClose();
+
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to update vehicle');
+    } finally {
+      setLoading(false);
     }
-
-    if (vinImage) {
-      data.append('vinImage', vinImage);
-    }
-
-    const response = await API.put(`/vehicles/${vehicle.vehicle_id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-
-    // 🆕 NEW: Show appropriate success message
-    if (vinImage) {
-      alert('✅ Vehicle updated successfully!\n\n🤖 AI is automatically re-verifying your VIN. Check "My Vehicles" in a few seconds to see the result!');
-    } else {
-      alert('✅ Vehicle updated successfully!');
-    }
-
-    if (onSuccess) onSuccess();
-    onClose();
-
-  } catch (error) {
-    setError(error.response?.data?.message || 'Failed to update vehicle');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -112,6 +120,31 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               ×
             </button>
           </div>
+
+          {/* 🆕 VIN Status Indicator */}
+          {vinStatus && (
+            <div className={`mb-6 p-4 rounded-lg border-2 ${
+              vinStatus === 'approved' ? 'bg-green-50 border-green-300' :
+              vinStatus === 'rejected' ? 'bg-red-50 border-red-300' :
+              'bg-yellow-50 border-yellow-300'
+            }`}>
+              <h4 className="font-semibold mb-1">VIN Verification Status</h4>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                vinStatus === 'approved' ? 'bg-green-100 text-green-800' :
+                vinStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                'bg-yellow-100 text-yellow-800'
+              }`}>
+                {vinStatus === 'approved' ? '✅ Approved' :
+                 vinStatus === 'rejected' ? '❌ Rejected' :
+                 '⏳ Pending Verification'}
+              </span>
+              {vinStatus === 'approved' && (
+                <p className="text-sm text-gray-600 mt-2">
+                  ℹ️ VIN cannot be edited once approved. Contact admin if you need to change it.
+                </p>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -192,18 +225,65 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Transmission</label>
+                <label className="block text-gray-700 font-medium mb-2">Transmission *</label>
                 <select
                   name="transmission"
                   value={formData.transmission}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 >
                   <option value="">Select Transmission</option>
                   <option value="Automatic">Automatic</option>
                   <option value="Manual">Manual</option>
+                  <option value="CVT">CVT</option>
                 </select>
               </div>
+
+              {/* 🆕 NEW: Fuel Type */}
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Fuel Type *</label>
+                <select
+                  name="fuel_type"
+                  value={formData.fuel_type}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                >
+                  <option value="">Select Fuel Type</option>
+                  <option value="Gasoline">Gasoline</option>
+                  <option value="Diesel">Diesel</option>
+                  <option value="Electric">Electric</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Plug-in Hybrid">Plug-in Hybrid</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 🆕 NEW: VIN Number - Editable if not approved */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                VIN Number *
+                {vinStatus === 'approved' && (
+                  <span className="ml-2 text-xs text-gray-500">(Cannot edit - approved)</span>
+                )}
+              </label>
+              <input
+                type="text"
+                name="vin_number"
+                value={formData.vin_number}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                placeholder="Enter 17-character VIN"
+                maxLength="17"
+                disabled={vinStatus === 'approved'}
+                required
+              />
+              {vinStatus !== 'approved' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  ⚠️ Changing VIN will reset verification status to pending
+                </p>
+              )}
             </div>
 
             <div>
@@ -234,7 +314,7 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
               )}
             </div>
 
-            {/* 🆕 NEW: VIN Image Re-upload */}
+            {/* VIN Image Re-upload */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <label className="block text-gray-700 font-medium mb-2">
                 Update VIN Plate Image (Re-upload for better OCR) 📸
@@ -246,7 +326,6 @@ function EditVehicleModal({ vehicle, onClose, onSuccess }) {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
               />
               
-              {/* Tips for better VIN photos */}
               <div className="mt-3 bg-white border border-blue-300 rounded p-3">
                 <p className="text-sm font-semibold text-blue-900 mb-2">📷 Tips for Clear VIN Photos:</p>
                 <ul className="text-xs text-blue-800 space-y-1">

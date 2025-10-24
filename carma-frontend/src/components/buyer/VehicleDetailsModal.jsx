@@ -110,6 +110,16 @@ function VehicleDetailsModal({ vehicle, onClose }) {
                   </p>
                 </div>
               )}
+
+              {/* 🆕 NEW: Fuel Type */}
+{vehicle.fuel_type && (
+  <div className="bg-gray-50 p-4 rounded-lg">
+    <p className="text-sm text-gray-600 mb-1">Fuel Type</p>
+    <p className="text-lg font-semibold text-gray-800">
+      ⚡ {vehicle.fuel_type}
+    </p>
+  </div>
+)}
             </div>
 
             {/* Description */}

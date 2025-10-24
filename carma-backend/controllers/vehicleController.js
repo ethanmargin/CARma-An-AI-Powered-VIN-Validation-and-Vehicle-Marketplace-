@@ -3,8 +3,8 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const vinOCR = require('../services/vinOCR');
-const { performVINOCR } = require('./vinOcrController'); // 🆕 NEW: Enhanced OCR
-const VINExtractor = require('../utils/vinExtractor'); // 🆕 NEW: Smart VIN extraction
+const { performVINOCR } = require('./vinOcrController');
+const VINExtractor = require('../utils/vinExtractor');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -42,7 +42,7 @@ const upload = multer({
   { name: 'vinImage', maxCount: 1 }
 ]);
 
-// 🆕 UPDATED: Helper function to run ENHANCED OCR verification in background
+// Helper function to run ENHANCED OCR verification in background
 async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) {
   try {
     console.log(`🤖 Starting ENHANCED auto-verification for vehicle ${vehicleId}...`);
@@ -55,7 +55,7 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
     let ocrConfidence = 'low';
     
     try {
-      // 🆕 NEW: Use enhanced OCR with smart extraction
+      // Use enhanced OCR with smart extraction
       console.log('🔍 Running ENHANCED OCR with smart VIN extraction...');
       const enhancedResult = await performVINOCR(vinImagePath);
       
@@ -85,7 +85,6 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
       console.log(`   Similarity: ${similarity}%`);
       console.log(`   Valid: ${enhancedResult.isValid}`);
       
-      // Build OCR result object
       ocrResult = {
         success: true,
         extractedVIN: extractedVIN,
@@ -97,35 +96,30 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
       
     } catch (enhancedOCRError) {
       console.error('⚠️ Enhanced OCR failed, falling back to legacy OCR:', enhancedOCRError);
-      // Fallback to legacy OCR
       ocrResult = await vinOCR.verifyVINFromImage(vinImagePath, expectedVIN);
       extractedVIN = ocrResult.extractedVIN;
       similarity = ocrResult.similarity || 0;
       ocrConfidence = ocrResult.confidence || 'low';
     }
     
-    // 🆕 UPDATED: Determine status based on similarity and validation
+    // Determine status based on similarity and validation
     let newStatus = 'pending';
     let verificationNotes = '';
     let recommendation = '';
     
     if (extractedVIN === expectedVIN && ocrResult.isValid) {
-      // Perfect match with valid VIN
       newStatus = 'approved';
       recommendation = 'auto_approve';
       verificationNotes = `✅ Auto-approved: Perfect VIN match (100%). Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Valid check digit.`;
     } else if (similarity >= 90 && ocrResult.isValid) {
-      // Very high similarity with valid VIN
       newStatus = 'approved';
       recommendation = 'auto_approve';
       verificationNotes = `✅ Auto-approved: High similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Valid check digit.`;
     } else if (similarity >= 70) {
-      // Medium similarity - needs manual review
       newStatus = 'pending';
       recommendation = 'manual_review';
       verificationNotes = `⚠️ Manual review required: Moderate similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN}. Confidence: ${ocrConfidence}. Admin will verify.`;
     } else {
-      // Low similarity - reject
       newStatus = 'rejected';
       recommendation = 'reject';
       verificationNotes = `❌ Auto-rejected: Low similarity (${similarity}%). Expected: ${expectedVIN}, Extracted: ${extractedVIN || 'NONE'}. Confidence: ${ocrConfidence}. Please re-upload clearer VIN image.`;
@@ -142,13 +136,7 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
            verification_notes = $4,
            date_verified = CURRENT_TIMESTAMP
        WHERE vehicle_id = $5`,
-      [
-        newStatus,
-        extractedVIN || null,
-        ocrConfidence,
-        verificationNotes,
-        vehicleId
-      ]
+      [newStatus, extractedVIN || null, ocrConfidence, verificationNotes, vehicleId]
     );
     
     // Log OCR action
@@ -162,7 +150,6 @@ async function runOCRVerification(vehicleId, vinImagePath, expectedVIN, userId) 
   } catch (error) {
     console.error(`❌ OCR verification failed for vehicle ${vehicleId}:`, error);
     
-    // Update verification with error status
     await db.query(
       `UPDATE vin_verification 
        SET verification_notes = $1
@@ -181,10 +168,9 @@ exports.addVehicle = async (req, res) => {
     }
 
     try {
-      const { make, model, year, price, description, vin_number, mileage, location, transmission } = req.body;
+      const { make, model, year, price, description, vin_number, mileage, location, transmission, fuel_type } = req.body;
       const userId = req.user.user_id;
       
-      // Get uploaded file paths
       const vehicleImagePath = req.files?.vehicleImage ? req.files.vehicleImage[0].path : null;
       const vinImagePath = req.files?.vinImage ? req.files.vinImage[0].path : null;
 
@@ -192,10 +178,10 @@ exports.addVehicle = async (req, res) => {
       console.log('✅ VIN Image Uploaded:', vinImagePath);
 
       // Validation
-      if (!make || !model || !vin_number || !year || !price) {
+      if (!make || !model || !vin_number || !year || !price || !fuel_type) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Please provide all required fields' 
+          message: 'Please provide all required fields (including fuel type)' 
         });
       }
 
@@ -234,10 +220,10 @@ exports.addVehicle = async (req, res) => {
 
       // Insert vehicle
       const result = await db.query(
-        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) 
+        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, fuel_type, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW()) 
          RETURNING *`,
-        [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission]
+        [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission, fuel_type]
       );
 
       const vehicleId = result.rows[0].vehicle_id;
@@ -248,19 +234,16 @@ exports.addVehicle = async (req, res) => {
         [vehicleId, 'pending', vinImagePath]
       );
 
-      // 🆕 UPDATED: Automatically run ENHANCED OCR verification in background
+      // Auto-trigger ENHANCED OCR
       console.log('🤖 Auto-triggering ENHANCED OCR verification...');
-      
-      // Run OCR without waiting (async background process)
       runOCRVerification(vehicleId, vinImagePath, vin_number, userId).catch(error => {
         console.error('❌ Background OCR error:', error);
-        // Don't fail the vehicle creation if OCR fails
       });
 
       // Log action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} with VIN image - Enhanced OCR auto-triggered`]
+        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} (${fuel_type}) - Enhanced OCR auto-triggered`]
       );
 
       res.status(201).json({
@@ -292,6 +275,7 @@ exports.getAllVehicles = async (req, res) => {
         v.mileage,
         v.location,
         v.transmission,
+        v.fuel_type,
         v.created_at,
         u.name as seller_name,
         u.email as seller_email,
@@ -374,7 +358,7 @@ exports.getVehicleById = async (req, res) => {
   }
 };
 
-// Update vehicle with AUTO-OCR on VIN re-upload
+// Update vehicle with VIN editing and AUTO-OCR
 exports.updateVehicle = async (req, res) => {
   upload(req, res, async function (err) {
     if (err) {
@@ -385,7 +369,7 @@ exports.updateVehicle = async (req, res) => {
     try {
       const { vehicleId } = req.params;
       const userId = req.user.user_id;
-      const { make, model, year, price, description, mileage, location, transmission } = req.body;
+      const { make, model, year, price, description, mileage, location, transmission, fuel_type, vin_number } = req.body;
 
       // Check ownership
       const ownerCheck = await db.query(
@@ -409,12 +393,11 @@ exports.updateVehicle = async (req, res) => {
         console.log('✅ New vehicle image uploaded:', vehicleImagePath);
       }
 
-      // 🆕 UPDATED: Handle new VIN image and auto-trigger ENHANCED OCR
+      // Handle new VIN image and auto-trigger ENHANCED OCR
       if (req.files?.vinImage) {
         const vinImagePath = req.files.vinImage[0].path;
         console.log('✅ New VIN image uploaded:', vinImagePath);
         
-        // Update VIN verification record with new image and reset status
         await db.query(
           `UPDATE vin_verification 
            SET submitted_vin_image = $1, 
@@ -429,28 +412,72 @@ exports.updateVehicle = async (req, res) => {
         
         console.log('✅ VIN image updated, verification reset to pending');
         
-        // 🆕 UPDATED: Auto-trigger ENHANCED OCR on re-upload
+        // Use the VIN number from the request body or existing vehicle
+        const vinToVerify = vin_number || vehicle.vin_number;
+        
         console.log('🤖 Auto-triggering ENHANCED OCR verification on re-upload...');
-        runOCRVerification(vehicleId, vinImagePath, vehicle.vin_number, userId).catch(error => {
+        runOCRVerification(vehicleId, vinImagePath, vinToVerify, userId).catch(error => {
           console.error('❌ Background OCR error:', error);
         });
       }
 
-      // Update vehicle
-      const updateResult = await db.query(
-        `UPDATE vehicles 
+      // 🆕 NEW: Handle VIN number editing
+      let updateQuery = `UPDATE vehicles 
          SET make = $1, model = $2, year = $3, price = $4, 
-             description = $5, image_path = $6, mileage = $7, location = $8, transmission = $9
-         WHERE vehicle_id = $10 AND user_id = $11
-         RETURNING *`,
-        [make, model, year, price, description, vehicleImagePath, mileage, location, transmission, vehicleId, userId]
+             description = $5, image_path = $6, mileage = $7, location = $8, transmission = $9, fuel_type = $10`;
+      let updateParams = [make, model, year, price, description, vehicleImagePath, mileage, location, transmission, fuel_type];
+
+      // Check VIN verification status
+      const vinStatusCheck = await db.query(
+        'SELECT status FROM vin_verification WHERE vehicle_id = $1',
+        [vehicleId]
       );
+
+      const vinStatus = vinStatusCheck.rows[0]?.status;
+
+      // Allow VIN editing only if pending, rejected, or no status
+      if (vin_number && vin_number !== vehicle.vin_number) {
+        if (vinStatus === 'approved') {
+          return res.status(400).json({
+            success: false,
+            message: '❌ Cannot edit VIN - already approved by admin. Contact support if you need to change it.'
+          });
+        }
+
+        // VIN can be edited
+        updateQuery += `, vin_number = $11 WHERE vehicle_id = $12 AND user_id = $13 RETURNING *`;
+        updateParams.push(vin_number, vehicleId, userId);
+        
+        console.log(`✅ VIN updated from ${vehicle.vin_number} to ${vin_number} (status was: ${vinStatus})`);
+        
+        // Reset VIN verification
+        await db.query(
+          `UPDATE vin_verification 
+           SET status = 'pending', 
+               ocr_extracted_vin = NULL,
+               ocr_confidence = NULL,
+               verification_notes = 'VIN number changed by seller. Needs re-verification.',
+               date_verified = NULL
+           WHERE vehicle_id = $1`,
+          [vehicleId]
+        );
+      } else {
+        updateQuery += ` WHERE vehicle_id = $11 AND user_id = $12 RETURNING *`;
+        updateParams.push(vehicleId, userId);
+      }
+
+      const updateResult = await db.query(updateQuery, updateParams);
+
+      let message = 'Vehicle updated successfully';
+      if (req.files?.vinImage) {
+        message = '🚗 Vehicle updated! 🤖 Enhanced AI is automatically re-verifying your VIN...';
+      } else if (vin_number && vin_number !== vehicle.vin_number) {
+        message = '🚗 Vehicle and VIN updated! ⚠️ VIN verification reset to pending. Please re-upload VIN image for auto-verification.';
+      }
 
       res.json({
         success: true,
-        message: req.files?.vinImage 
-          ? '🚗 Vehicle updated! 🤖 Enhanced AI is automatically re-verifying your VIN...' 
-          : 'Vehicle updated successfully',
+        message: message,
         vehicle: updateResult.rows[0]
       });
 
@@ -458,7 +485,8 @@ exports.updateVehicle = async (req, res) => {
       console.error('Update vehicle error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to update vehicle'
+        message: 'Failed to update vehicle',
+        error: error.message
       });
     }
   });
@@ -470,7 +498,6 @@ exports.deleteVehicle = async (req, res) => {
     const { vehicleId } = req.params;
     const userId = req.user.user_id;
 
-    // Check ownership
     const ownerCheck = await db.query(
       'SELECT * FROM vehicles WHERE vehicle_id = $1 AND user_id = $2',
       [vehicleId, userId]
@@ -483,13 +510,8 @@ exports.deleteVehicle = async (req, res) => {
       });
     }
 
-    // Delete bookmarks first
     await db.query('DELETE FROM bookmarks WHERE vehicle_id = $1', [vehicleId]);
-
-    // Delete VIN verification
     await db.query('DELETE FROM vin_verification WHERE vehicle_id = $1', [vehicleId]);
-
-    // Delete vehicle
     await db.query('DELETE FROM vehicles WHERE vehicle_id = $1', [vehicleId]);
 
     res.json({
@@ -512,14 +534,12 @@ exports.bookmarkVehicle = async (req, res) => {
     const { vehicleId } = req.body;
     const userId = req.user.user_id;
 
-    // Check if already bookmarked
     const existing = await db.query(
       'SELECT * FROM bookmarks WHERE user_id = $1 AND vehicle_id = $2',
       [userId, vehicleId]
     );
 
     if (existing.rows.length > 0) {
-      // Remove bookmark
       await db.query(
         'DELETE FROM bookmarks WHERE user_id = $1 AND vehicle_id = $2',
         [userId, vehicleId]
@@ -527,7 +547,6 @@ exports.bookmarkVehicle = async (req, res) => {
       return res.json({ success: true, message: 'Bookmark removed', bookmarked: false });
     }
 
-    // Add bookmark
     await db.query(
       'INSERT INTO bookmarks (user_id, vehicle_id) VALUES ($1, $2)',
       [userId, vehicleId]

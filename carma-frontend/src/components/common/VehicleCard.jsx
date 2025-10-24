@@ -96,6 +96,13 @@ function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }
           </p>
         )}
 
+        {/* 🆕 NEW: Fuel Type */}
+{vehicle.fuel_type && (
+  <p className="text-sm text-gray-600 mb-2">
+    ⚡ {vehicle.fuel_type}
+  </p>
+)}
+
         {vehicle.description && (
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {vehicle.description}
