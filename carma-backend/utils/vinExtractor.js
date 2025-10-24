@@ -44,16 +44,6 @@ class VINExtractor {
     if (!vin || vin.length < 1) return false;
     
     const firstChar = vin[0];
-    
-    // Valid first characters for VINs:
-    // 1-5: USA
-    // J: Japan
-    // K: Korea
-    // L: China
-    // S: UK
-    // V: France/Spain
-    // W: Germany
-    // Z: Italy
     const validFirstChars = ['1', '2', '3', '4', '5', 'J', 'K', 'L', 'S', 'V', 'W', 'Z'];
     
     return validFirstChars.includes(firstChar);
@@ -66,11 +56,58 @@ class VINExtractor {
     const labelWords = [
       'BUMPER', 'SAFETY', 'MOTOR', 'VEHICLE', 'THEFT', 'PREVENTION',
       'FEDERAL', 'STANDARD', 'MANUFACTURE', 'PASSENGER', 'CONFORM',
-      'APPLICABLE', 'EFFECT', 'SHOWN', 'ABOVE', 'DATE'
+      'APPLICABLE', 'EFFECT', 'SHOWN', 'ABOVE', 'DATE', 'FRONT', 'REAR'
     ];
     
     const upperStr = str.toUpperCase();
     return labelWords.some(word => upperStr.includes(word));
+  }
+
+  /**
+   * 🆕 NEW: Check if VIN looks like a real VIN pattern
+   */
+  static hasRealVINPattern(vin) {
+    // Real VINs have specific patterns
+    // Must have at least 2 letters and 5 numbers
+    const letterCount = (vin.match(/[A-Z]/g) || []).length;
+    const numberCount = (vin.match(/[0-9]/g) || []).length;
+    
+    if (letterCount < 2 || numberCount < 5) return false;
+    
+    // Must NOT be all sequential numbers (like 23855258)
+    const hasOnlySequentialDigits = /^\d+$/.test(vin);
+    if (hasOnlySequentialDigits) return false;
+    
+    // Real VINs usually have letters in first 3 positions
+    const firstThree = vin.substring(0, 3);
+    const hasLettersInFirst3 = /[A-Z]/.test(firstThree);
+    
+    return hasLettersInFirst3;
+  }
+
+  /**
+   * 🆕 NEW: Check if VIN is near "MADE IN" keywords
+   */
+  static isNearMadeIn(vin, originalText) {
+    const keywords = ['MADE IN', 'MADE', 'GERMANY', 'JAPAN', 'USA', 'CANADA', 'KOREA', 'CHINA'];
+    const upperText = originalText.toUpperCase();
+    
+    // Find VIN position in text
+    const vinIndex = upperText.indexOf(vin);
+    if (vinIndex === -1) return false;
+    
+    // Check if any keyword is within 50 characters
+    for (const keyword of keywords) {
+      const keywordIndex = upperText.indexOf(keyword);
+      if (keywordIndex !== -1) {
+        const distance = Math.abs(vinIndex - keywordIndex);
+        if (distance < 50) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -94,17 +131,27 @@ class VINExtractor {
       score -= 100;
     }
     
-    // +100 points if near VIN keywords (VERY IMPORTANT!)
+    // 🆕 NEW: +100 points if has real VIN pattern
+    if (this.hasRealVINPattern(vin)) {
+      score += 100;
+      console.log(`   ✓ Has real VIN pattern`);
+    }
+    
+    // 🆕 NEW: +150 points if near "MADE IN" keywords (VERY STRONG!)
+    if (this.isNearMadeIn(vin, originalText)) {
+      score += 150;
+      console.log(`   🎯 Found VIN near MADE IN keyword!`);
+    }
+    
+    // +100 points if near VIN keywords
     const vinKeywords = ['V.I.N.', 'V.I.N', 'VIN:', 'VIN ', 'V I N', 'VIN', '++', '+n', '+ +', '+ n'];
     const upperText = originalText.toUpperCase();
     const cleanedText = originalText.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     
-    // Check if VIN appears near keywords in original text
     for (const keyword of vinKeywords) {
       const keywordIndex = upperText.indexOf(keyword);
       if (keywordIndex !== -1) {
-        // Find VIN position in original text (with some tolerance for spaces/special chars)
-        const vinPattern = vin.split('').join('[^A-Z0-9]{0,3}'); // Allow 0-3 special chars between each character
+        const vinPattern = vin.split('').join('[^A-Z0-9]{0,3}');
         const vinRegex = new RegExp(vinPattern, 'i');
         const match = upperText.match(vinRegex);
         
@@ -112,10 +159,10 @@ class VINExtractor {
           const vinIndex = match.index;
           const distance = Math.abs(vinIndex - keywordIndex);
           
-          if (distance < 20) { // Within 20 characters
+          if (distance < 20) {
             score += 100;
             console.log(`   🎯 Found VIN near keyword "${keyword}" (distance: ${distance})`);
-            break; // Only count once
+            break;
           }
         }
       }
@@ -132,17 +179,24 @@ class VINExtractor {
       }
     }
     
-    // +20 points if alphanumeric mix (real VINs have both)
+    // +20 points if alphanumeric mix
     const hasLetters = /[A-Z]/.test(vin);
     const hasNumbers = /[0-9]/.test(vin);
     if (hasLetters && hasNumbers) {
       score += 20;
     }
     
-    // -50 points if contains "GAWR" or "GVWR" (weight ratings, not VINs)
+    // 🆕 UPDATED: -300 points if contains "GAWR" or "GVWR" (VERY STRONG penalty!)
     if (vin.includes('GAWR') || vin.includes('GVWR')) {
-      score -= 50;
-      console.log(`   ⚠️ Contains weight rating text (GAWR/GVWR)`);
+      score -= 300;
+      console.log(`   ❌ STRONG PENALTY: Contains weight rating text (GAWR/GVWR)`);
+    }
+    
+    // 🆕 NEW: -200 points if mostly numbers (like weight values)
+    const numberRatio = (vin.match(/[0-9]/g) || []).length / vin.length;
+    if (numberRatio > 0.7) {
+      score -= 200;
+      console.log(`   ⚠️ Too many numbers (${Math.round(numberRatio * 100)}% - likely weight data)`);
     }
     
     return score;
@@ -152,15 +206,15 @@ class VINExtractor {
    * Extract VIN from typical label format
    */
   static extractFromLabel(text) {
-    console.log('🔍 Original OCR text:', text);
+    console.log('🔍 Original OCR text:', text.substring(0, 200) + '...');
     
     // Remove special characters but keep alphanumeric
     let cleaned = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    console.log('✅ After removing special chars:', cleaned);
+    console.log('✅ After removing special chars:', cleaned.substring(0, 100) + '...');
     
     // Remove invalid VIN characters (I, O, Q)
     cleaned = cleaned.replace(/[IOQ]/g, '');
-    console.log('✅ After removing I,O,Q:', cleaned);
+    console.log('✅ After removing I,O,Q:', cleaned.substring(0, 100) + '...');
     
     // Find all 17-character sequences
     const candidates = [];
@@ -169,7 +223,7 @@ class VINExtractor {
       candidates.push(candidate);
     }
     
-    console.log('🎯 VIN Candidates found:', candidates);
+    console.log(`🎯 Found ${candidates.length} total VIN candidates`);
     
     // Score all candidates and pick the best one
     let bestCandidate = null;
