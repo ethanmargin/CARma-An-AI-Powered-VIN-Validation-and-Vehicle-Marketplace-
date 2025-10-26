@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import API from '../../services/api';
 
 function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }) {
@@ -17,6 +18,18 @@ function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }
       console.error('Bookmark error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🆕 NEW: Format listed date
+  const formatListedDate = (listedAt) => {
+    if (!listedAt) return null;
+    
+    try {
+      const date = new Date(listedAt);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      return null;
     }
   };
 
@@ -47,6 +60,13 @@ function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }
           >
             {bookmarked ? '❤️' : '🤍'}
           </button>
+        )}
+
+        {/* 🆕 NEW: Listed Badge */}
+        {vehicle.listed_at && (
+          <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded-md text-xs font-medium shadow-lg">
+            Listed {formatListedDate(vehicle.listed_at)}
+          </div>
         )}
 
         {/* VIN Status Badge */}
@@ -96,12 +116,12 @@ function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }
           </p>
         )}
 
-        {/* 🆕 NEW: Fuel Type */}
-{vehicle.fuel_type && (
-  <p className="text-sm text-gray-600 mb-2">
-    ⚡ {vehicle.fuel_type}
-  </p>
-)}
+        {/* Fuel Type */}
+        {vehicle.fuel_type && (
+          <p className="text-sm text-gray-600 mb-2">
+            ⚡ {vehicle.fuel_type}
+          </p>
+        )}
 
         {vehicle.description && (
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -118,22 +138,34 @@ function VehicleCard({ vehicle, onBookmark, onViewDetails, showBookmark = true }
           </div>
         )}
 
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">
-            VIN: {vehicle.vin_number?.substring(0, 8)}...
-          </span>
-          
-          {/* View Details Button - Now Functional */}
-          <button 
-            onClick={() => onViewDetails && onViewDetails(vehicle)}
-            className="text-green-600 hover:text-green-700 font-semibold text-sm hover:underline transition"
-          >
-            View Details →
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        {/* 🆕 NEW: Listed date in card footer */}
+        {vehicle.listed_at && (
+          <div className="mb-3 pb-3 border-b border-gray-200">
+            <p className="text-xs text-gray-500 flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Listed {formatListedDate(vehicle.listed_at)}
+            </p>
+          </div>
+        )}
 
+        <div className="flex justify-between items-center">
+<span className="text-xs text-gray-500">
+VIN: {vehicle.vin_number?.substring(0, 8)}...
+</span>
+
+{/* View Details Button - Now Functional */}
+      <button 
+        onClick={() => onViewDetails && onViewDetails(vehicle)}
+        className="text-green-600 hover:text-green-700 font-semibold text-sm hover:underline transition"
+      >
+        View Details →
+      </button>
+    </div>
+  </div>
+</div>
+
+);
+}
 export default VehicleCard;

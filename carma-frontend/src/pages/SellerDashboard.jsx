@@ -54,7 +54,7 @@ function SellerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header - UPDATED */}
+      {/* Header */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -62,7 +62,6 @@ function SellerDashboard() {
               <h1 className="text-2xl font-bold text-green-600">CARma</h1>
               <span className="ml-4 text-gray-600">Seller Dashboard</span>
             </div>
-            {/* 🆕 NEW: Profile + Logout buttons */}
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/profile')}
@@ -71,8 +70,6 @@ function SellerDashboard() {
                 <span>👤</span>
                 <span>Profile</span>
               </button>
-              
-             
             </div>
           </div>
         </div>
@@ -150,14 +147,14 @@ function SellerDashboard() {
           </div>
         )}
 
-        {/* MyVehicles Component */}
+        {/* MyVehicles Component - Now includes listed_at */}
         {isVerified && (
           <div className="mb-8">
             <MyVehicles key={refreshVehicles} />
           </div>
         )}
 
-        {/* Statistics - REMOVED PROFILE BUTTON */}
+        {/* Statistics */}
         {isVerified && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-bold mb-4">Quick Stats</h3>

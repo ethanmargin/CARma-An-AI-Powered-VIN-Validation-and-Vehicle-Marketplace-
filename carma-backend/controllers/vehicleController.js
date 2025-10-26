@@ -277,6 +277,7 @@ exports.getAllVehicles = async (req, res) => {
         v.transmission,
         v.fuel_type,
         v.created_at,
+        v.listed_at,
         u.name as seller_name,
         u.email as seller_email,
         u.mobile_number as seller_mobile,
@@ -303,7 +304,7 @@ exports.getAllVehicles = async (req, res) => {
 exports.getMyVehicles = async (req, res) => {
   try {
     const userId = req.user.user_id;
-
+    
     const result = await db.query(`
       SELECT 
         v.*,
@@ -348,7 +349,6 @@ exports.getVehicleById = async (req, res) => {
       success: true,
       vehicle: result.rows[0]
     });
-
   } catch (error) {
     console.error('Get vehicle error:', error);
     res.status(500).json({
@@ -369,7 +369,7 @@ exports.updateVehicle = async (req, res) => {
     try {
       const { vehicleId } = req.params;
       const userId = req.user.user_id;
-      const { make, model, year, price, description, mileage, location, transmission, fuel_type, vin_number } = req.body;
+      const { make, model, year, price, description, mileage, location, transmission, fuel_type, vin_number, visibility_status } = req.body;
 
       // Check ownership
       const ownerCheck = await db.query(
@@ -385,6 +385,17 @@ exports.updateVehicle = async (req, res) => {
       }
 
       const vehicle = ownerCheck.rows[0];
+
+      // 🆕 NEW: Track when vehicle is first listed
+      let listedAtUpdate = '';
+      if (
+        visibility_status === 'visible' && 
+        vehicle.visibility_status !== 'visible' && 
+        !vehicle.listed_at
+      ) {
+        listedAtUpdate = ', listed_at = NOW()';
+        console.log(`🎉 Vehicle ${vehicleId} is being listed for the first time!`);
+      }
 
       // Handle new vehicle image if uploaded
       let vehicleImagePath = vehicle.image_path;
@@ -421,18 +432,26 @@ exports.updateVehicle = async (req, res) => {
         });
       }
 
-      // 🆕 NEW: Handle VIN number editing
+      // 🆕 Handle VIN number editing
       let updateQuery = `UPDATE vehicles 
          SET make = $1, model = $2, year = $3, price = $4, 
              description = $5, image_path = $6, mileage = $7, location = $8, transmission = $9, fuel_type = $10`;
       let updateParams = [make, model, year, price, description, vehicleImagePath, mileage, location, transmission, fuel_type];
+      
+      let paramCount = 11;
+
+      // Add visibility_status if provided
+      if (visibility_status !== undefined) {
+        updateQuery += `, visibility_status = $${paramCount}`;
+        updateParams.push(visibility_status);
+        paramCount++;
+      }
 
       // Check VIN verification status
       const vinStatusCheck = await db.query(
         'SELECT status FROM vin_verification WHERE vehicle_id = $1',
         [vehicleId]
       );
-
       const vinStatus = vinStatusCheck.rows[0]?.status;
 
       // Allow VIN editing only if pending, rejected, or no status
@@ -445,8 +464,9 @@ exports.updateVehicle = async (req, res) => {
         }
 
         // VIN can be edited
-        updateQuery += `, vin_number = $11 WHERE vehicle_id = $12 AND user_id = $13 RETURNING *`;
-        updateParams.push(vin_number, vehicleId, userId);
+        updateQuery += `, vin_number = $${paramCount}`;
+        updateParams.push(vin_number);
+        paramCount++;
         
         console.log(`✅ VIN updated from ${vehicle.vin_number} to ${vin_number} (status was: ${vinStatus})`);
         
@@ -461,15 +481,18 @@ exports.updateVehicle = async (req, res) => {
            WHERE vehicle_id = $1`,
           [vehicleId]
         );
-      } else {
-        updateQuery += ` WHERE vehicle_id = $11 AND user_id = $12 RETURNING *`;
-        updateParams.push(vehicleId, userId);
       }
+
+      // Add listed_at update if needed
+      updateQuery += `${listedAtUpdate} WHERE vehicle_id = $${paramCount} AND user_id = $${paramCount + 1} RETURNING *`;
+      updateParams.push(vehicleId, userId);
 
       const updateResult = await db.query(updateQuery, updateParams);
 
       let message = 'Vehicle updated successfully';
-      if (req.files?.vinImage) {
+      if (listedAtUpdate) {
+        message = '🎉 Vehicle listed successfully!';
+      } else if (req.files?.vinImage) {
         message = '🚗 Vehicle updated! 🤖 Enhanced AI is automatically re-verifying your VIN...';
       } else if (vin_number && vin_number !== vehicle.vin_number) {
         message = '🚗 Vehicle and VIN updated! ⚠️ VIN verification reset to pending. Please re-upload VIN image for auto-verification.';
@@ -518,7 +541,6 @@ exports.deleteVehicle = async (req, res) => {
       success: true,
       message: 'Vehicle deleted successfully'
     });
-
   } catch (error) {
     console.error('Delete vehicle error:', error);
     res.status(500).json({
@@ -553,7 +575,6 @@ exports.bookmarkVehicle = async (req, res) => {
     );
 
     res.json({ success: true, message: 'Vehicle bookmarked!', bookmarked: true });
-
   } catch (error) {
     console.error('Bookmark error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -564,7 +585,7 @@ exports.bookmarkVehicle = async (req, res) => {
 exports.getBookmarkedVehicles = async (req, res) => {
   try {
     const userId = req.user.user_id;
-
+    
     const result = await db.query(`
       SELECT 
         v.*,
@@ -582,7 +603,6 @@ exports.getBookmarkedVehicles = async (req, res) => {
     `, [userId]);
 
     res.json({ success: true, bookmarks: result.rows });
-
   } catch (error) {
     console.error('Get bookmarks error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

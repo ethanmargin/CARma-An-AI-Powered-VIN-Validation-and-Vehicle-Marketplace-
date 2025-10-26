@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import API from '../../services/api';
 import VerificationStatus from '../common/VerificationStatus';
 import EditVehicleModal from './EditVehicleModal';
+import { format, formatDistanceToNow } from 'date-fns';
+
 
 function MyVehicles() {
   const [vehicles, setVehicles] = useState([]);
@@ -115,6 +117,23 @@ function MyVehicles() {
                     {vehicle.description}
                   </p>
                 )}
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+  Listed Date
+</th>
+
+<td className="px-6 py-4 text-sm text-gray-500">
+  {vehicle.listed_at ? (
+    <div>
+      <div className="font-medium">{format(new Date(vehicle.listed_at), 'MMM d, yyyy')}</div>
+      <div className="text-xs text-gray-400">
+        {formatDistanceToNow(new Date(vehicle.listed_at), { addSuffix: true })}
+      </div>
+    </div>
+  ) : (
+    <span className="text-gray-400 italic">Not listed yet</span>
+  )}
+</td>
 
                 <div className="flex space-x-2">
                   <button
