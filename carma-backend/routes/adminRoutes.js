@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../config/db'); // 🆕 ADD THIS LINE
 const adminController = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -32,14 +33,9 @@ router.get('/all-vehicles', adminController.getAllVehiclesForAdmin);
 // Toggle vehicle visibility
 router.put('/vehicles/:vehicleId/visibility', adminController.toggleVehicleVisibility);
 
-
 // Get analytics/reports (admin only)
-router.get('/reports', authenticate, async (req, res) => {
+router.get('/reports', async (req, res) => { // 🆕 REMOVED 'authenticate' - already protected by router.use(protect)
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Admin access required' });
-    }
-
     // USER ANALYTICS
     const userStats = await db.query(`
       SELECT 
@@ -109,46 +105,69 @@ router.get('/reports', authenticate, async (req, res) => {
       FROM vehicles
     `);
 
-    // Calculate percentages
-    const totalUsers = parseInt(userStats.rows[0].total_users);
-    const verifiedUsers = parseInt(verificationStats.rows[0].verified_users);
-    const userVerificationRate = totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(1) : 0;
+    // Calculate percentages (🆕 ADDED SAFETY CHECKS)
+    const totalUsers = parseInt(userStats.rows[0].total_users) || 0;
+    const verifiedUsers = parseInt(verificationStats.rows[0].verified_users) || 0;
+    const userVerificationRate = totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(1) : '0.0';
 
-    const totalVehicles = parseInt(vehicleStats.rows[0].total_vehicles);
-    const approvedVins = parseInt(vinStats.rows[0].approved_vins);
-    const vinVerificationRate = totalVehicles > 0 ? ((approvedVins / totalVehicles) * 100).toFixed(1) : 0;
+    const totalVehicles = parseInt(vehicleStats.rows[0].total_vehicles) || 0;
+    const approvedVins = parseInt(vinStats.rows[0].approved_vins) || 0;
+    const vinVerificationRate = totalVehicles > 0 ? ((approvedVins / totalVehicles) * 100).toFixed(1) : '0.0';
 
-    const totalVinChecks = parseInt(vinStats.rows[0].total_vin_verifications);
-    const ocrAutoApproved = parseInt(vinStats.rows[0].high_confidence_ocr);
-    const ocrSuccessRate = totalVinChecks > 0 ? ((ocrAutoApproved / totalVinChecks) * 100).toFixed(1) : 0;
+    const totalVinChecks = parseInt(vinStats.rows[0].total_vin_verifications) || 0;
+    const ocrAutoApproved = parseInt(vinStats.rows[0].high_confidence_ocr) || 0;
+    const ocrSuccessRate = totalVinChecks > 0 ? ((ocrAutoApproved / totalVinChecks) * 100).toFixed(1) : '0.0';
 
     res.json({
       success: true,
       reports: {
         users: {
-          ...userStats.rows[0],
-          ...verificationStats.rows[0],
+          total_users: totalUsers,
+          total_buyers: parseInt(userStats.rows[0].total_buyers) || 0,
+          total_sellers: parseInt(userStats.rows[0].total_sellers) || 0,
+          total_admins: parseInt(userStats.rows[0].total_admins) || 0,
+          total_verifications: parseInt(verificationStats.rows[0].total_verifications) || 0,
+          verified_users: verifiedUsers,
+          pending_verifications: parseInt(verificationStats.rows[0].pending_verifications) || 0,
+          rejected_verifications: parseInt(verificationStats.rows[0].rejected_verifications) || 0,
           verification_rate: userVerificationRate
         },
         vehicles: {
-          ...vehicleStats.rows[0],
+          total_vehicles: totalVehicles,
+          visible_vehicles: parseInt(vehicleStats.rows[0].visible_vehicles) || 0,
+          hidden_vehicles: parseInt(vehicleStats.rows[0].hidden_vehicles) || 0,
+          avg_price: parseFloat(vehicleStats.rows[0].avg_price) || 0,
+          max_price: parseFloat(vehicleStats.rows[0].max_price) || 0,
+          min_price: parseFloat(vehicleStats.rows[0].min_price) || 0,
           vin_verification_rate: vinVerificationRate
         },
         vin_verification: {
-          ...vinStats.rows[0],
+          total_vin_verifications: totalVinChecks,
+          approved_vins: approvedVins,
+          pending_vins: parseInt(vinStats.rows[0].pending_vins) || 0,
+          rejected_vins: parseInt(vinStats.rows[0].rejected_vins) || 0,
+          high_confidence_ocr: ocrAutoApproved,
+          medium_confidence_ocr: parseInt(vinStats.rows[0].medium_confidence_ocr) || 0,
+          low_confidence_ocr: parseInt(vinStats.rows[0].low_confidence_ocr) || 0,
           ocr_success_rate: ocrSuccessRate
         },
         top_makes: topMakes.rows,
         recent_activity: {
-          ...recentActivity.rows[0],
-          ...recentVehicles.rows[0]
+          users_this_week: parseInt(recentActivity.rows[0].users_this_week) || 0,
+          users_this_month: parseInt(recentActivity.rows[0].users_this_month) || 0,
+          vehicles_this_week: parseInt(recentVehicles.rows[0].vehicles_this_week) || 0,
+          vehicles_this_month: parseInt(recentVehicles.rows[0].vehicles_this_month) || 0
         }
       }
     });
 
   } catch (error) {
     console.error('Get reports error:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error', 
+      error: error.message 
+    });
   }
 });
 
