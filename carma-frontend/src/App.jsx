@@ -60,6 +60,9 @@ function App() {
           />
 
           {/* Protected Routes - Admin */}
+          {/* 🆕 FIXED: Added redirect from /admin to /admin/dashboard */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          
           <Route 
             path="/admin/dashboard" 
             element={
@@ -69,31 +72,41 @@ function App() {
             } 
           />
 
-          {/* 🆕 NEW: VIN Verifications Route */}
-<Route
-  path="/admin/vin-verifications"
-  element={
-    <ProtectedRoute allowedRoles={['admin']}>
-      <VINVerificationList />
-    </ProtectedRoute>
-  }
-/>
-<Route path="/admin/reports" element={<Reports />} />
+          {/* VIN Verifications Route */}
+          <Route
+            path="/admin/vin-verifications"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <VINVerificationList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 🆕 FIXED: Added ProtectedRoute wrapper to Reports */}
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Profile Route - Available to all authenticated users */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'seller', 'buyer']}>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/login" replace />} />
-          {/* Profile Route - Available to all authenticated users */}
-<Route
-  path="/profile"
-  element={
-    <ProtectedRoute allowedRoles={['admin', 'seller', 'buyer']}>
-      <ProfilePage />
-    </ProtectedRoute>
-  }
-/>
         </Routes>
       </Router>
     </AuthProvider>
