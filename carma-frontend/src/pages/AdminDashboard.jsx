@@ -388,15 +388,15 @@ function AdminDashboard() {
               </button>
 
               <button 
-                disabled
-                className="w-full bg-gray-400 text-white px-4 py-3 rounded-lg font-medium transition text-left flex items-center cursor-not-allowed opacity-50"
-              >
-                <span className="mr-3">📋</span>
-                <div className="text-left">
-                  <div className="font-semibold">System Logs</div>
-                  <div className="text-xs opacity-90">Coming soon...</div>
-                </div>
-              </button>
+  onClick={() => navigate('/admin/reports')}
+  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium transition text-left flex items-center"
+>
+  <span className="mr-3">📊</span>
+  <div className="text-left">
+    <div className="font-semibold">Analytics & Reports</div>
+    <div className="text-xs opacity-90">View system metrics</div>
+  </div>
+</button>
             </div>
           </div>
 

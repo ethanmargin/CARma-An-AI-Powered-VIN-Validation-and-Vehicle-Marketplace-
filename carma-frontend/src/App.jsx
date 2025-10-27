@@ -12,6 +12,8 @@ import BrowseVehicles from './pages/BrowseVehicles';
 import BookmarksPage from './pages/BookmarksPage';
 import ProfilePage from './pages/ProfilePage';
 import VINVerificationList from './components/admin/VINVerificationList';
+import Reports from './pages/Reports';
+
 function App() {
   return (
     <AuthProvider>
@@ -76,6 +78,7 @@ function App() {
     </ProtectedRoute>
   }
 />
+<Route path="/admin/reports" element={<Reports />} />
 
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/login" replace />} />
