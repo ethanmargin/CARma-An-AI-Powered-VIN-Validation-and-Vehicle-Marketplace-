@@ -218,16 +218,15 @@ exports.addVehicle = async (req, res) => {
         });
       }
 
-      // 🆕 FIXED: Insert vehicle with listed_at set to NOW() since it's immediately visible
+      // Insert vehicle
       const result = await db.query(
-        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, fuel_type, visibility_status, listed_at, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()) 
+        `INSERT INTO vehicles (user_id, make, model, year, price, description, vin_number, image_path, mileage, location, transmission, fuel_type, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW()) 
          RETURNING *`,
-        [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission, fuel_type, 'visible']
+        [userId, make, model, year, price, description, vin_number, vehicleImagePath, mileage, location, transmission, fuel_type]
       );
 
       const vehicleId = result.rows[0].vehicle_id;
-      console.log(`✅ Vehicle ${vehicleId} created and listed at: ${new Date().toISOString()}`);
 
       // Create VIN verification record
       await db.query(
@@ -244,12 +243,12 @@ exports.addVehicle = async (req, res) => {
       // Log action
       await db.query(
         'INSERT INTO system_logs (user_id, action, details) VALUES ($1, $2, $3)',
-        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} (${fuel_type}) - Listed immediately with enhanced OCR`]
+        [userId, 'VEHICLE_ADDED', `Added vehicle: ${make} ${model} (${fuel_type}) - Enhanced OCR auto-triggered`]
       );
 
       res.status(201).json({
         success: true,
-        message: '🚗 Vehicle added and listed successfully! 🤖 AI is automatically verifying your VIN with enhanced detection...',
+        message: '🚗 Vehicle added successfully! 🤖 AI is automatically verifying your VIN with enhanced detection...',
         vehicle: result.rows[0]
       });
 
